@@ -72,7 +72,7 @@ public class ServerThread extends Thread {
                 // 处理查询结果
                 String xx;
                 if (flag) {
-                    xx = "responseSignIn-Yes";
+                    xx = "responseSignIn-Yes"+rs.getString("user_name");
                     //向列表中添加一个新用户，更新Main中的列表
                     clients.put(accountAndPasswd[0], socket);
                     Main.setClients(clients);

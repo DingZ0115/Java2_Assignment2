@@ -17,7 +17,6 @@ public class ThreadReader extends Thread {
             this.curController = controller;
             bufferedReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
         } catch (IOException e) {
-            // TODO exhdl
             e.printStackTrace();
         }
     }
@@ -29,12 +28,13 @@ public class ThreadReader extends Thread {
             while ((message = bufferedReader.readLine()) != null) {
                 Message decodedMessage = deserialize(message);
                 if (decodedMessage.method.equals("responseSignUp") || decodedMessage.method.equals("responseSignIn")) {
+                    System.out.println("You are logging");
                     Client.setReplyMsg(decodedMessage);
                     Client.setReceiveMsgOrNot(true);
                 } else if (decodedMessage.method.equals("chat")) {
-                    System.out.println("chat!!!!");
+                    System.out.println("You are chatting");
                     Platform.runLater(() -> {
-                        curController.chatContentList.getItems().add(decodedMessage);
+                        curController.showRecvMsg(decodedMessage);
                     });
                 }
             }

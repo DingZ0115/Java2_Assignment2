@@ -33,25 +33,14 @@ public class Client extends Application {
     static Message replyMsg;
     static volatile boolean receiveMsgOrNot = false;
 
-    FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("my-view.fxml"));
+    FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("/View/IndexView.fxml"));
     Controller cl;
 
     public static void main(String[] args) {// ***启动
         launch(args);
     }
 
-//    public void creatThread() {
-//        try {
-//            s = new Socket("127.0.0.1", 9999);
-//
-//
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        }
-//    }
-
     public void start(Stage primaryStage) throws IOException {// UI主轴
-//        creatThread();
         s = new Socket("127.0.0.1", 9999);
         out = s.getOutputStream();
         in = s.getInputStream();
@@ -94,7 +83,7 @@ public class Client extends Application {
         RegisterPane.setHgap(20);
         RegisterPane.setVgap(20);
         RegisterPane.setBackground(new Background(new BackgroundImage(
-                new Image(Objects.requireNonNull(getClass().getResourceAsStream("/com/example/assignment2_client/Image/Register.jpg"))),
+                new Image(Objects.requireNonNull(getClass().getResourceAsStream("/Image/Register.jpg"))),
                 BackgroundRepeat.REPEAT, BackgroundRepeat.NO_REPEAT, BackgroundPosition.CENTER,
                 new BackgroundSize(BackgroundSize.AUTO, BackgroundSize.AUTO, false, false, true, false))));
 
@@ -169,13 +158,12 @@ public class Client extends Application {
         SignPane.add(SignPasswordTextField, 4, 4);
         SignPane.getChildren().addAll(SignOkButton, SignRegisterButton);
         SignPane.setBackground(new Background(new BackgroundImage(
-                new Image(Objects.requireNonNull(getClass().getResourceAsStream("/com/example/assignment2_client/Image/Sign.jpg"))),
+                new Image(Objects.requireNonNull(getClass().getResourceAsStream("/Image/Sign.jpg"))),
                 BackgroundRepeat.REPEAT, BackgroundRepeat.NO_REPEAT, BackgroundPosition.CENTER,
                 new BackgroundSize(BackgroundSize.AUTO, BackgroundSize.AUTO, false, false, true, false))));
 
         SignOkButton.setOnAction(e -> { // 转跳主程序界面
             try {
-//                FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("my-view.fxml"));
                 String xx = SignAccountTextField.getText() + "%" + SignPasswordTextField.getText();
                 Message message = new Message(new Date(), "0", "0", xx, "signIn");
                 String mm = message.serialize();
@@ -186,13 +174,11 @@ public class Client extends Application {
                     Thread.onSpinWait();
                 }
                 receiveMsgOrNot = false;
-                if (replyMsg.data.equals("responseSignIn-Yes")) {
+                if (replyMsg.data.contains("responseSignIn-Yes")) {
                     ShowStage.setScene(centerScene);
                     ShowStage.setTitle("Chatting Client");
                     ShowStage.show();
-                    cl.setUsername("SignAccountTextField.getText()");
-//                    Controller cl = fxmlLoader.getController();
-//                    cl.setWriter(writer);
+                    cl.setUserName(replyMsg.data.substring(18),SignAccountTextField.getText());
                 } else {
                     Alert alert = new Alert(Alert.AlertType.WARNING);
                     alert.setTitle("警告");
