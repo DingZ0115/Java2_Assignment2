@@ -28,11 +28,11 @@ public class ThreadReader extends Thread {
             while ((message = bufferedReader.readLine()) != null) {
                 Message decodedMessage = deserialize(message);
                 if (decodedMessage.method.equals("responseSignUp") || decodedMessage.method.equals("responseSignIn")) {
-                    System.out.println("You are logging");
+                    System.out.println("You have logged in.");
                     Client.setReplyMsg(decodedMessage);
                     Client.setReceiveMsgOrNot(true);
                 } else if (decodedMessage.method.equals("chat")) {
-                    System.out.println("You are chatting");
+                    System.out.println("You are chatting.");
                     Platform.runLater(() -> {
                         curController.showRecvMsg(decodedMessage);
                     });

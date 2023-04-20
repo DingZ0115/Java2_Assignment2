@@ -8,6 +8,7 @@ import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.geometry.Insets;
 import javafx.scene.Cursor;
+import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
@@ -15,11 +16,15 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.AnchorPane;
+import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Paint;
 import javafx.scene.text.Font;
 import javafx.scene.text.TextAlignment;
+import javafx.stage.Modality;
+import javafx.stage.Stage;
 
+import java.awt.MouseInfo;
 import java.io.*;
 import java.net.URL;
 import java.util.*;
@@ -40,6 +45,7 @@ public class Controller implements Initializable {
     @FXML
     TextArea inputArea;
     PrintWriter writer;
+    Stage curStage;
     String userName;
     private boolean updateFlag = false;
 
@@ -159,6 +165,10 @@ public class Controller implements Initializable {
         this.writer = writer;
     }
 
+    public void setCurStage(Stage curStage) {
+        this.curStage = curStage;
+    }
+
     public void setUserName(String userName, String account) {
         this.userName = userName;
         showMyName.setText(userName);
@@ -231,6 +241,116 @@ public class Controller implements Initializable {
     //头像点击事件
     @FXML
     void mouseClickMyImage(MouseEvent event) {
+        DialogPane dp = new DialogPane();
 
+        dp.setPrefWidth(200);
+        dp.setPrefHeight(230);
+
+        BorderPane bp = new BorderPane();
+
+        ImageView myInfo = new ImageView(new Image(Objects.requireNonNull(
+                getClass().getResource("/Image/account.png")).toExternalForm()));
+
+        myInfo.setFitWidth(200);
+        myInfo.setFitHeight(200);
+
+        bp.setCenter(myInfo);
+
+        AnchorPane ap = new AnchorPane();
+        ap.setPrefWidth(200);
+        ap.setPrefHeight(50);
+        ap.setStyle("-fx-background-color:#ffffff");
+
+        ImageView icon1 = new ImageView(new Image(Objects.requireNonNull(
+                getClass().getResource("/Image/addfriend.png")).toExternalForm()));
+        icon1.setFitWidth(20);
+        icon1.setFitHeight(20);
+
+        ImageView icon2 = new ImageView(new Image(Objects.requireNonNull(
+                getClass().getResource("/Image/exit.png")).toExternalForm()));
+        icon2.setFitWidth(20);
+        icon2.setFitHeight(20);
+
+        Button button1 = new Button();
+        button1.setGraphic(icon1);
+        button1.setStyle("-fx-background-color:#ffffff");
+
+        Button button2 = new Button();
+        button2.setGraphic(icon2);
+        button2.setStyle("-fx-background-color:#ffffff");
+
+        ap.getChildren().addAll(button1, button2);
+
+        AnchorPane.setRightAnchor(button1, 5.0);
+        AnchorPane.setTopAnchor(button1, 5.0);
+
+        AnchorPane.setRightAnchor(button2, 40.0);
+        AnchorPane.setTopAnchor(button2, 5.0);
+
+        bp.setBottom(ap);
+
+        dp.getChildren().add(bp);
+
+
+        Stage s = new Stage();
+        s.getIcons().add(new Image(Objects.requireNonNull(
+                getClass().getResource("/Image/haimian.png")).toExternalForm()));
+        s.setResizable(false);
+        Scene sc = new Scene(dp);
+        s.setScene(sc);
+        //设置所有者
+        s.initOwner(curStage);
+        s.initModality(Modality.WINDOW_MODAL);
+        s.setX(MouseInfo.getPointerInfo().getLocation().x);
+        s.setY(MouseInfo.getPointerInfo().getLocation().y);
+        s.show();
+
+//        button1.setOnMouseClicked(new EventHandler<MouseEvent>() {
+//            @Override
+//            public void handle(MouseEvent event) {
+//                addFriendWindown();
+//            }
+//        });
+//
+        button2.setOnMouseClicked(new EventHandler<MouseEvent>() {
+
+            @Override
+            public void handle(MouseEvent event) {
+                exitLogin(s);
+            }
+        });
+
+        button1.setOnMouseMoved(new EventHandler<MouseEvent>() {
+            @Override
+            public void handle(MouseEvent event) {
+                button1.setCursor(Cursor.HAND);
+            }
+        });
+        button2.setOnMouseMoved(new EventHandler<MouseEvent>() {
+            @Override
+            public void handle(MouseEvent event) {
+                button2.setCursor(Cursor.HAND);
+            }
+        });
+    }
+
+    void exitLogin(Stage s) {
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        alert.setTitle("提示");
+        alert.setHeaderText("确定要退出登录吗?");
+
+        Stage alertS = (Stage) alert.getDialogPane().getScene().getWindow();
+        alertS.getIcons().add(new Image(Objects.requireNonNull(
+                getClass().getResource("/Image/haimian.png")).toExternalForm()));
+
+        Optional<ButtonType> result = alert.showAndWait();
+        if (result.get() == ButtonType.OK) {
+            if (s != null) {
+                s.close();
+            }
+            System.out.println("您已退出登录");
+            curStage.setScene(Client.SignScene);
+        }
+        alert.close();
     }
 }

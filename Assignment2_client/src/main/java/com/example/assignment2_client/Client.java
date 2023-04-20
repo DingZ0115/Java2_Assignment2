@@ -25,8 +25,8 @@ public class Client extends Application {
     BufferedReader br;
     PrintWriter writer;
     Stage ShowStage = new Stage();
-    GridPane SignPane = new GridPane();// 登录界面的
-    Scene SignScene = new Scene(SignPane, 600, 400);
+    static GridPane SignPane = new GridPane();// 登录界面的
+    static Scene SignScene = new Scene(SignPane, 600, 400);
     GridPane RegisterPane = new GridPane();// 注册界面的
     Scene RegisterScene = new Scene(RegisterPane, 500, 600);
     Scene centerScene;
@@ -175,10 +175,13 @@ public class Client extends Application {
                 }
                 receiveMsgOrNot = false;
                 if (replyMsg.data.contains("responseSignIn-Yes")) {
+                    SignAccountTextField.clear();
+                    SignPasswordTextField.clear();
                     ShowStage.setScene(centerScene);
                     ShowStage.setTitle("Chatting Client");
                     ShowStage.show();
-                    cl.setUserName(replyMsg.data.substring(18),SignAccountTextField.getText());
+                    cl.setUserName(replyMsg.data.substring(18), SignAccountTextField.getText());
+                    cl.setCurStage(ShowStage);
                 } else {
                     Alert alert = new Alert(Alert.AlertType.WARNING);
                     alert.setTitle("警告");
@@ -203,5 +206,6 @@ public class Client extends Application {
     public static void setReceiveMsgOrNot(boolean rm) {
         receiveMsgOrNot = rm;
     }
+
 }
 
