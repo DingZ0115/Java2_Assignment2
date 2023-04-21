@@ -2,9 +2,17 @@ package com.example.assignment2_client;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import javafx.application.Platform;
+import javafx.scene.control.Alert;
+import javafx.scene.control.ButtonType;
+import javafx.scene.image.Image;
+import javafx.stage.Stage;
 
 import java.io.*;
 import java.net.Socket;
+import java.net.SocketException;
+import java.util.Date;
+import java.util.Objects;
+import java.util.Optional;
 
 public class ThreadReader extends Thread {
     Socket socket;
@@ -41,8 +49,26 @@ public class ThreadReader extends Thread {
                     Platform.runLater(() -> {
                         curController.updateOnlineUserMap(decodedMessage);
                     });
+                } else if (decodedMessage.method.equals("broadcastExit")) {
+                    System.out.println("A new user leaves");
+                    Platform.runLater(() -> {
+                        curController.exitOnlineUserMap(decodedMessage);
+                    });
                 }
             }
+        } catch (SocketException e) {
+            System.out.println("服务器挂了");
+            Platform.runLater(() -> {
+                Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+                alert.setTitle("警告");
+                alert.setHeaderText("服务器因不明原因断开连接");
+                alert.setContentText("点击确定退出程序");
+                Optional<ButtonType> result = alert.showAndWait();
+                if (result.get() == ButtonType.OK) {
+                    System.exit(0);
+                }
+                alert.close();
+            });
         } catch (IOException | ClassNotFoundException e) {
             e.printStackTrace();
         }

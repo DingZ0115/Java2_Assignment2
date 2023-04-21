@@ -113,15 +113,6 @@ public class Controller implements Initializable {
                 emoj.setCursor(Cursor.HAND);
             }
         });
-        //按回车发送
-        inputArea.setOnKeyPressed(new EventHandler<KeyEvent>() {
-            @Override
-            public void handle(KeyEvent keyEvent) {
-                if (keyEvent.getCode() == KeyCode.ENTER) {
-                    sendMsg();
-                }
-            }
-        });
     }
 
     public void sendMsg() {
@@ -130,7 +121,7 @@ public class Controller implements Initializable {
             Message message = new Message(new Date(), showMyAccount.getText(), curPrivateChatUser, ss, "chat");
             String mm = message.serialize();
             writer.println(mm);
-            showSendMsg(ss);
+            showSendMsg(message);
             inputArea.clear();
         } catch (IOException e) {
             e.printStackTrace();
@@ -180,12 +171,20 @@ public class Controller implements Initializable {
         //弹窗提示一个用户来了
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
         alert.setTitle("提醒");
-        alert.setHeaderText("好友上线提醒");
-        alert.setContentText("您的好友" + newUserInfo[1] + "上线了");
+        alert.setHeaderText("用户上线提醒");
+        alert.setContentText("用户" + newUserInfo[1] + "上线了");
         alert.showAndWait();
     }
 
-    public void showSendMsg(String msg) {
+    public void exitOnlineUserMap(Message exitMsg) {
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle("提醒");
+        alert.setHeaderText("用户下线提醒");
+        alert.setContentText("用户" + exitMsg.getData() + "下线了");
+        alert.showAndWait();
+    }
+
+    public void showSendMsg(Message msg) {
         AnchorPane an = new AnchorPane();
         an.setPrefWidth(590);
         ImageView iv = new ImageView(new Image(Objects.requireNonNull(
@@ -193,12 +192,12 @@ public class Controller implements Initializable {
         iv.setFitWidth(40);
         iv.setFitHeight(40);
 
-        Label l1 = new Label(showMyName.getText());
+        Label l1 = new Label(msg.getTimestamp() + " " + showMyName.getText());
         l1.setFont(new Font(13));
         l1.setTextAlignment(TextAlignment.RIGHT);
         l1.setMaxWidth(400);
 
-        Label l2 = new Label(msg);
+        Label l2 = new Label(msg.data);
         l2.setFont(new Font(18));
         l2.setStyle("-fx-background-color: #ffffff;-fx-background-radius: 8;");
         l2.setPadding(new Insets(5, 10, 5, 10));
@@ -230,12 +229,13 @@ public class Controller implements Initializable {
         iv.setFitHeight(40);
         Label l1;
         if (msg.sendBy.equals(curPrivateChatUser)) {
-            l1 = new Label(showMyName.getText());
+            l1 = new Label(showMyName.getText() + " " + msg.getTimestamp());
         } else {
-            l1 = new Label(onlineUserMap.get(msg.sendBy)[1]);
+            l1 = new Label(onlineUserMap.get(msg.sendBy)[1] + " " + msg.getTimestamp());
         }
         l1.setFont(new Font(13));
         l1.setMaxWidth(400);
+
         Label l2 = new Label(msg.data);
         l2.setFont(new Font(18));
         l2.setStyle("-fx-background-color: #55a3ec;-fx-background-radius: 8;");
@@ -331,7 +331,14 @@ public class Controller implements Initializable {
         Optional<ButtonType> result = alert.showAndWait();
         if (result.get() == ButtonType.OK) {
             System.out.println("您已退出登录");
-            curStage.setScene(Client.SignScene);
+            try {
+                Message message = new Message(new Date(), "0", "0", showMyAccount.getText(), "exit");
+                String mm = message.serialize();
+                writer.println(mm);
+                System.exit(0);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
         alert.close();
     }
@@ -401,9 +408,6 @@ public class Controller implements Initializable {
         for (Map.Entry<String, String[]> entry : onlineUserMap.entrySet()) {
             if (!entry.getKey().equals(showMyAccount.getText())) {
                 String[] value = entry.getValue();
-                for (int i = 0; i < value.length; i++) {
-                    System.out.println(value[i]);
-                }
                 setAUserPage(entry.getValue());
             }
         }

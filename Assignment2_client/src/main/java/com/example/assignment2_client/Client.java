@@ -103,7 +103,6 @@ public class Client extends Application {
             try {
                 String xx = RegisterIDTextField.getText() + "%" + RegisterAccountTextField.getText()
                         + "%" + RegisterPasswordTextField.getText();
-                System.out.println(xx);
                 Message message = new Message(new Date(), "0", "0", xx, "signUp");
                 String mm = message.serialize();
                 writer.println(mm);
@@ -169,7 +168,6 @@ public class Client extends Application {
                 String xx = SignAccountTextField.getText() + "%" + SignPasswordTextField.getText();
                 Message message = new Message(new Date(), "0", "0", xx, "signIn");
                 String mm = message.serialize();
-                System.out.println(xx);
                 writer.println(mm);
 
                 while (!receiveMsgOrNot) {

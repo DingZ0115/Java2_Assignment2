@@ -19,7 +19,7 @@ public class Main {
         while (true) {
             try {
                 Socket socket = serverSocket.accept();//监听是否来了一个新用户
-                System.out.println("A user comes");
+                System.out.println("一个用户来了");
                 //传一个当前用户和socket的map
                 ServerThread thread = new ServerThread(socket, clients, clientsInfo); //给新用户创建一个线程
                 thread.start();

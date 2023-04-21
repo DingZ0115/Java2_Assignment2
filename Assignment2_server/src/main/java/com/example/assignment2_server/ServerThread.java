@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.io.*;
 import java.net.Socket;
+import java.net.SocketException;
 import java.sql.*;
 import java.util.Date;
 import java.util.HashMap;
@@ -36,11 +37,11 @@ public class ServerThread extends Thread {
             String message = "";
             while ((message = bufferedReader.readLine()) != null) {
                 Message decodedMessage = deserialize(message);
-                System.out.print(decodedMessage.data);
                 query(decodedMessage);
             }
+        } catch (SocketException e) {
+            System.out.println("一个用户离开了");
         } catch (IOException | ClassNotFoundException e) {
-            //TODO: handle e
             e.printStackTrace();
         } catch (SQLException e) {
             throw new RuntimeException(e);
@@ -152,8 +153,25 @@ public class ServerThread extends Thread {
                 Message response = new Message(new Date(), "0", "0", xx, "responseSignUp");
                 String mm = response.serialize();
                 writer.println(mm);
+            } else if (message.getMethod().equals("exit")) {
+                try {
+                    String nameTemp = clientsInfo.get(message.getData()).split("\\|")[1];
+                    clients.remove(message.getData());
+                    clientsInfo.remove(message.getData());
+                    Set<String> keySet = clients.keySet();  // 获取所有的key
+                    for (String key : keySet) {
+                        Socket toSocket = clients.get(key);
+                        Message transMessage = new Message(new Date(), "server", key,
+                                nameTemp , "broadcastExit");
+                        String mm = transMessage.serialize();
+                        OutputStream out = toSocket.getOutputStream();
+                        PrintWriter w = new PrintWriter(out, true);
+                        w.println(mm);
+                    }
+                } catch (IOException ex) {
+                    throw new RuntimeException(ex);
+                }
             } else {
-                System.out.println("chat");
                 chat(message);
             }
         } catch (ClassNotFoundException e) {
