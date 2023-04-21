@@ -36,6 +36,11 @@ public class ThreadReader extends Thread {
                     Platform.runLater(() -> {
                         curController.showRecvMsg(decodedMessage);
                     });
+                } else if (decodedMessage.method.equals("broadcast")) {
+                    System.out.println("A new user comes");
+                    Platform.runLater(() -> {
+                        curController.updateOnlineUserMap(decodedMessage);
+                    });
                 }
             }
         } catch (IOException | ClassNotFoundException e) {

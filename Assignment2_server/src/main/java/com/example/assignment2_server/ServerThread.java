@@ -6,20 +6,24 @@ import java.io.*;
 import java.net.Socket;
 import java.sql.*;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 
 public class ServerThread extends Thread {
     Socket socket;
     ConcurrentMap<String, Socket> clients;
+    HashMap<String, String> clientsInfo = new HashMap<>();
     BufferedReader bufferedReader;
 
     InputStream in;
     OutputStream out;
     PrintWriter writer;
 
-    public ServerThread(Socket socket, ConcurrentMap<String, Socket> clients) throws IOException {
+    public ServerThread(Socket socket, ConcurrentMap<String, Socket> clients, HashMap<String, String> clientsInfo) throws IOException {
         this.socket = socket;
         this.clients = clients;
+        this.clientsInfo = clientsInfo;
         this.in = socket.getInputStream();
         this.out = socket.getOutputStream();
         writer = new PrintWriter(out, true);
@@ -32,7 +36,7 @@ public class ServerThread extends Thread {
             String message = "";
             while ((message = bufferedReader.readLine()) != null) {
                 Message decodedMessage = deserialize(message);
-                System.out.println(decodedMessage.getData());
+                System.out.print(decodedMessage.data);
                 query(decodedMessage);
             }
         } catch (IOException | ClassNotFoundException e) {
@@ -54,36 +58,67 @@ public class ServerThread extends Thread {
         Connection conn = null;
         try {
             Class.forName(driver);
-            // 连接数据库
             String user = "postgres";
             // 数据库的 URL 和用户名、密码
             String url = "jdbc:postgresql://localhost/postgres";
             String password = "123456";
             conn = DriverManager.getConnection(url, user, password);
-            System.out.println("Connected to the PostgreSQL server successfully.");
 
             if (message.getMethod().equals("signIn")) {
                 String[] accountAndPasswd = message.data.split("%");
-                PreparedStatement pstmt = conn.prepareStatement("SELECT * FROM users WHERE account = ? AND passwd = ?;");
-                pstmt.setString(1, accountAndPasswd[0]);
-                pstmt.setString(2, accountAndPasswd[1]);
-                ResultSet rs = pstmt.executeQuery();
-                boolean flag = rs.next();
-                // 处理查询结果
-                String xx;
-                if (flag) {
-                    xx = "responseSignIn-Yes"+rs.getString("user_name");
-                    //向列表中添加一个新用户，更新Main中的列表
-                    clients.put(accountAndPasswd[0], socket);
-                    Main.setClients(clients);
+                String xx = "";
+                if (clients.containsKey(accountAndPasswd[0])) {
+                    xx = "Already login";
+                } else if (!clients.containsKey(accountAndPasswd[0])) {
+                    PreparedStatement pstmt = conn.prepareStatement("SELECT * FROM users WHERE account = ? AND passwd = ?;");
+                    pstmt.setString(1, accountAndPasswd[0]);
+                    pstmt.setString(2, accountAndPasswd[1]);
+                    ResultSet rs = pstmt.executeQuery();
+                    boolean flag = rs.next();
+                    // 处理查询结果
+                    if (flag) {//上线成功
+                        //向列表中添加一个新用户，更新Main中的列表，返回前端所有当前在线的用户
+                        String nameAndSignature = accountAndPasswd[0] + "|"
+                                + rs.getString("user_name") + "|"
+                                + rs.getString("personal_signature");
+                        StringBuilder sb = new StringBuilder();
+                        sb.append("responseSignIn-Yes");
+                        sb.append("%");
+                        sb.append(nameAndSignature);
+                        Set<String> keySet = clients.keySet();  // 获取所有的key
+                        for (String key : keySet) {
+                            sb.append("%");
+                            String[] oneClientInfo = clientsInfo.get(key).split("\\|");
+                            sb.append(oneClientInfo[0]);
+                            sb.append("|");
+                            sb.append(oneClientInfo[1]);
+                            sb.append("|");
+                            sb.append(oneClientInfo[2]);
+                        }
+                        xx = sb.toString();
+                        String broadcast = "AUserCome" + nameAndSignature;
+                        //更新所有其他用户的在线用户列表
+                        for (String key : keySet) {
+                            Socket toSocket = clients.get(key);
+                            Message transMessage = new Message(new Date(), "server", key, broadcast, "broadcast");
+                            String mm = transMessage.serialize();
+                            OutputStream out = toSocket.getOutputStream();
+                            PrintWriter w = new PrintWriter(out, true);
+                            w.println(mm);
+                        }
+                        clients.put(accountAndPasswd[0], socket);
+                        clientsInfo.put(accountAndPasswd[0], nameAndSignature);
+                        Main.setClients(clients);
+                        Main.setClientsInfo(clientsInfo);
+                        rs.close();
+                        pstmt.close();
+                    }
                 } else {
                     xx = "responseSignIn-No";
                 }
                 Message response = new Message(new Date(), "0", "0", xx, "responseSignIn");
                 String mm = response.serialize();
                 writer.println(mm);
-                rs.close();
-                pstmt.close();
             } else if (message.getMethod().equals("signUp")) {
                 String[] information = message.data.split("%");
                 PreparedStatement pstmt0 = conn.prepareStatement("SELECT * FROM users WHERE account = ? ;");
@@ -121,8 +156,6 @@ public class ServerThread extends Thread {
                 System.out.println("chat");
                 chat(message);
             }
-//            in.close();
-//            out.close();
         } catch (ClassNotFoundException e) {
             System.err.println("Could not find the PostgreSQL JDBC driver class.");
             e.printStackTrace();
@@ -145,7 +178,6 @@ public class ServerThread extends Thread {
     public void chat(Message m) throws IOException {
         String sendBy = m.getSendBy();
         String sendTo = m.getSendTo();
-//        Socket fromSocket = clients.get(sendBy);
         Socket toSocket = clients.get(sendTo);
         Message transMessage = new Message(new Date(), sendBy, sendTo, m.getData(), "chat");
         String mm = transMessage.serialize();

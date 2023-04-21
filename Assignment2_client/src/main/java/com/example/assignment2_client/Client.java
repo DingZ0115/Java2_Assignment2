@@ -55,7 +55,9 @@ public class Client extends Application {
         Sign();
         Register();
         ShowStage.setScene(SignScene);
-        ShowStage.initStyle(StageStyle.UNDECORATED);
+        ShowStage.getIcons().add(new Image(Objects.requireNonNull(
+                getClass().getResource("/Image/sandy.png")).toExternalForm()));
+        ShowStage.initStyle(StageStyle.DECORATED);
         ShowStage.show();
     }
 
@@ -175,13 +177,19 @@ public class Client extends Application {
                 }
                 receiveMsgOrNot = false;
                 if (replyMsg.data.contains("responseSignIn-Yes")) {
-                    SignAccountTextField.clear();
-                    SignPasswordTextField.clear();
                     ShowStage.setScene(centerScene);
                     ShowStage.setTitle("Chatting Client");
                     ShowStage.show();
-                    cl.setUserName(replyMsg.data.substring(18), SignAccountTextField.getText());
+                    cl.setInfo(replyMsg.data.substring(19));
                     cl.setCurStage(ShowStage);
+                    SignAccountTextField.clear();
+                    SignPasswordTextField.clear();
+                } else if (replyMsg.data.equals("Already login")) {
+                    Alert alert = new Alert(Alert.AlertType.WARNING);
+                    alert.setTitle("警告");
+                    alert.setHeaderText("您已登录");
+                    alert.setContentText("您已登录，无需重复登录");
+                    alert.showAndWait();
                 } else {
                     Alert alert = new Alert(Alert.AlertType.WARNING);
                     alert.setTitle("警告");

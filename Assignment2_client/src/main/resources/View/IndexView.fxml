@@ -15,12 +15,26 @@
             <top>
                 <AnchorPane prefHeight="100.0" BorderPane.alignment="CENTER">
                     <children>
-                        <ImageView fx:id="myImage" fitHeight="60.0" fitWidth="60.0" layoutX="31.0" layoutY="20.0"
+                        <ImageView fx:id="portrait" fitHeight="60.0" fitWidth="60.0" layoutX="31.0" layoutY="20.0"
                                    onMouseClicked="#mouseClickMyImage" pickOnBounds="true" preserveRatio="true">
                             <image>
-                                <Image url="@../Image/image.jpg"/>
+                                <Image url="@../Image/buger.png"/>
                             </image>
                         </ImageView>
+
+                        <ImageView fx:id="create" fitHeight="20.0" fitWidth="20.0" layoutX="31.0" layoutY="90.0"
+                                   onMouseClicked="#mouseClickCreate" pickOnBounds="true" preserveRatio="true">
+                            <image>
+                                <Image url="@../Image/create.png"/>
+                            </image>
+                        </ImageView>
+                        <ImageView fx:id="exit" fitHeight="20.0" fitWidth="20.0" layoutX="70.0" layoutY="90.0"
+                                   onMouseClicked="#mouseClickExit" pickOnBounds="true" preserveRatio="true">
+                            <image>
+                                <Image url="@../Image/exit.png"/>
+                            </image>
+                        </ImageView>
+
                         <Label fx:id="showMyName" layoutX="119.0" layoutY="26.0" maxWidth="150.0" minWidth="50.0"
                                text="DZ">
                             <font>
@@ -33,7 +47,7 @@
                             </font>
                         </Label>
                         <Label fx:id="showMyAccount" layoutX="156.0" layoutY="58.0" minWidth="50.0" prefHeight="18.0"
-                               prefWidth="120.0" text="cxh123456722222289">
+                               prefWidth="120.0" text="dz25848484848">
                             <font>
                                 <Font size="13.0"/>
                             </font>
@@ -67,7 +81,7 @@
     <center>
         <BorderPane prefWidth="600.0" BorderPane.alignment="CENTER">
             <center>
-                <BorderPane BorderPane.alignment="CENTER" >
+                <BorderPane BorderPane.alignment="CENTER">
                     <bottom>
                         <BorderPane prefHeight="200.0" BorderPane.alignment="CENTER">
                             <top>
