@@ -67,6 +67,7 @@ public class Controller implements Initializable {
     HashMap<String, String[]> onlineUserMap = new HashMap<>();
 
     HashMap<String, String[]> groupMap = new HashMap<>();
+    String speakingPerson; //群聊里面发言的人，在用户发言和用户收到信息都要更新
 
     @Override
     public void initialize(URL url, ResourceBundle resourceBundle) {
@@ -128,8 +129,9 @@ public class Controller implements Initializable {
                         .collect(Collectors.joining("%"));
 
                 //群号+自己的昵称
-                message = new Message(new Date(), curChat + "%" + showMyName.getText(),
+                message = new Message(new Date(), curChat + "%" + showMyName.getText()+"%"+showMyAccount,
                         result, ss, "groupChat");
+                speakingPerson = showMyAccount.getText();
             }
             String mm = message.serialize();
             writer.println(mm);
@@ -264,8 +266,11 @@ public class Controller implements Initializable {
         } else {
             String[] number_user = msg.getSendBy().split("%");
             if (!number_user[0].equals(curChat)) {
-                // TODO: msgVBox.getChildren().clear();///不能瞎clear，因为群聊发多少条，curChat都不变
-                showFriendName.setText(number_user[0]);
+                // TODO: 不能瞎clear，因为群聊发多少条，curChat都不变
+                if(!number_user[2].equals(speakingPerson)){
+                    msgVBox.getChildren().clear();
+                    showFriendName.setText(number_user[0]);
+                }
             }
             l1.setText(number_user[1] + " " + msg.getTimestamp());
             curChat = number_user[0];
