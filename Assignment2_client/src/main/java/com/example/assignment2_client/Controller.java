@@ -2,12 +2,14 @@ package com.example.assignment2_client;
 
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
+import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.geometry.Insets;
 import javafx.scene.Cursor;
+import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.image.Image;
@@ -128,13 +130,6 @@ public class Controller implements Initializable {
         }
     }
 
-
-    /**
-     * Sends the message to the <b>currently selected</b> chat.
-     * <p>
-     * Blank messages are not allowed.
-     * After sending the message, you should clear the text input field.
-     */
     @FXML
     public void doSendMessage(ActionEvent event) {
         //空消息不允许发送
@@ -177,10 +172,30 @@ public class Controller implements Initializable {
     }
 
     public void exitOnlineUserMap(Message exitMsg) {
+        System.out.println(exitMsg.getData());
+        String[] info = exitMsg.getData().split("\\|");
+        onlineUserMap.remove(info[0]);//从在线列表删除下线用户
+        //更新好友列表
+        // 获取VBox中的所有子节点列表
+        ObservableList<Node> children = friendVBox.getChildren();
+
+        // 遍历子节点列表，查找要删除的AnchorPane节点
+        for (Node node : children) {
+            if (node instanceof AnchorPane) {
+                AnchorPane anchorPane = (AnchorPane) node;
+                System.out.println(exitMsg.getData());
+                System.out.println(anchorPane.getId());
+                if (info[0].equals(anchorPane.getId())) {
+                    // 找到了要删除的AnchorPane节点，从VBox中移除它
+                    friendVBox.getChildren().remove(anchorPane);
+                    break;
+                }
+            }
+        }
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
         alert.setTitle("提醒");
         alert.setHeaderText("用户下线提醒");
-        alert.setContentText("用户" + exitMsg.getData() + "下线了");
+        alert.setContentText("用户" + info[1] + "下线了");
         alert.showAndWait();
     }
 
@@ -266,10 +281,10 @@ public class Controller implements Initializable {
         ScrollPane scrollPane = new ScrollPane();// 使用一个滚动板面
         VBox box = new VBox(); // 滚动板面里放行垂直布局， VBox里放多个复选框
 
-        String[] allTable = {"1111", "2222", "3333"};
+        Set<String> keySet = onlineUserMap.keySet();  // 获取所有的key
         ArrayList<String> selectedUser = new ArrayList<>();
-        for (String t : allTable) {
-            CheckBox cb = new CheckBox(t);
+        for (String t : keySet) {
+            CheckBox cb = new CheckBox(onlineUserMap.get(t)[1]);
             cb.selectedProperty().addListener(new ChangeListener<Boolean>() {
                 public void changed(ObservableValue<? extends Boolean> ov,
                                     Boolean old_val, Boolean new_val) {
@@ -283,6 +298,7 @@ public class Controller implements Initializable {
             box.getChildren().add(cb);
             box.setMargin(cb, new Insets(10, 10, 0, 10));// 设置间距
         }
+        selectedUser.add(showMyAccount.getText());
         Button button = new Button("确认创建群聊");
         button.setStyle("-fx-background-color:#ffffff");
 
@@ -303,8 +319,16 @@ public class Controller implements Initializable {
         button.setOnMouseClicked(new EventHandler<MouseEvent>() {
             @Override
             public void handle(MouseEvent event) {
-                confirmCreateGroup(selectedUser);
-                stage.close();
+                if (selectedUser.size() < 3) {
+                    Alert alert = new Alert(Alert.AlertType.WARNING);
+                    alert.setTitle("警告");
+                    alert.setHeaderText("群聊人数警告");
+                    alert.setContentText("群聊人数不可以小于3人");
+                    alert.showAndWait();
+                } else {
+                    confirmCreateGroup(selectedUser);
+                    stage.close();
+                }
             }
         });
     }
@@ -314,6 +338,7 @@ public class Controller implements Initializable {
     }
 
     public void confirmCreateGroup(ArrayList<String> selectedUser) {
+        //这里面存的是account
         for (String s : selectedUser) {
             System.out.println(s);
         }
@@ -407,7 +432,6 @@ public class Controller implements Initializable {
         setAUserPage(personalValue);
         for (Map.Entry<String, String[]> entry : onlineUserMap.entrySet()) {
             if (!entry.getKey().equals(showMyAccount.getText())) {
-                String[] value = entry.getValue();
                 setAUserPage(entry.getValue());
             }
         }
@@ -417,6 +441,9 @@ public class Controller implements Initializable {
         String[] imgs = {"photo1.jpg", "photo2.jpg", "photo3.jpg", "photo4.jpg"};
         int count = (int) (Math.random() * 100);
         AnchorPane an = new AnchorPane();
+        //给这个组件设置唯一标识
+        an.setId(value[0]);
+
         an.setPrefHeight(60);
         ImageView iv = new ImageView(new Image(Objects.requireNonNull(getClass().getResource("/Image/" + imgs[count % 4])).toExternalForm()));
         iv.setFitWidth(40);
@@ -438,6 +465,7 @@ public class Controller implements Initializable {
         AnchorPane.setLeftAnchor(l2, 91.0);
         AnchorPane.setTopAnchor(l2, 36.0);
         friendVBox.getChildren().add(an);
+
         an.setOnMouseMoved(new EventHandler<MouseEvent>() {
             @Override
             public void handle(MouseEvent arg0) {

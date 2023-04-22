@@ -155,14 +155,14 @@ public class ServerThread extends Thread {
                 writer.println(mm);
             } else if (message.getMethod().equals("exit")) {
                 try {
-                    String nameTemp = clientsInfo.get(message.getData()).split("\\|")[1];
+                    String leftUserInfo = clientsInfo.get(message.getData());
                     clients.remove(message.getData());
                     clientsInfo.remove(message.getData());
                     Set<String> keySet = clients.keySet();  // 获取所有的key
                     for (String key : keySet) {
                         Socket toSocket = clients.get(key);
                         Message transMessage = new Message(new Date(), "server", key,
-                                nameTemp , "broadcastExit");
+                                leftUserInfo, "broadcastExit");
                         String mm = transMessage.serialize();
                         OutputStream out = toSocket.getOutputStream();
                         PrintWriter w = new PrintWriter(out, true);
