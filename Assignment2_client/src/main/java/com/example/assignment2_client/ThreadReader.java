@@ -35,25 +35,35 @@ public class ThreadReader extends Thread {
             String message = "";
             while ((message = bufferedReader.readLine()) != null) {
                 Message decodedMessage = deserialize(message);
-                if (decodedMessage.method.equals("responseSignUp") || decodedMessage.method.equals("responseSignIn")) {
-                    System.out.println("You have logged in.");
-                    Client.setReplyMsg(decodedMessage);
-                    Client.setReceiveMsgOrNot(true);
-                } else if (decodedMessage.method.equals("chat")) {
-                    System.out.println("You are chatting.");
-                    Platform.runLater(() -> {
-                        curController.showRecvMsg(decodedMessage);
-                    });
-                } else if (decodedMessage.method.equals("broadcast")) {
-                    System.out.println("A new user comes");
-                    Platform.runLater(() -> {
-                        curController.updateOnlineUserMap(decodedMessage);
-                    });
-                } else if (decodedMessage.method.equals("broadcastExit")) {
-                    System.out.println("A new user leaves");
-                    Platform.runLater(() -> {
-                        curController.exitOnlineUserMap(decodedMessage);
-                    });
+                switch (decodedMessage.method) {
+                    case "responseSignUp", "responseSignIn" -> {
+                        System.out.println("You are trying to log in.");
+                        Client.setReplyMsg(decodedMessage);
+                        Client.setReceiveMsgOrNot(true);
+                    }
+                    case "chat", "broadcastGroupChat" -> {
+                        Platform.runLater(() -> {
+                            curController.showRecvMsg(decodedMessage);
+                        });
+                    }
+                    case "broadcast" -> {
+                        System.out.println("A new user comes");
+                        Platform.runLater(() -> {
+                            curController.updateOnlineUserMap(decodedMessage);
+                        });
+                    }
+                    case "broadcastExit" -> {
+                        System.out.println("A new user leaves");
+                        Platform.runLater(() -> {
+                            curController.exitOnlineUserMap(decodedMessage);
+                        });
+                    }
+                    case "broadcastCreateGroup" -> {
+                        System.out.println("您已成功加入群聊");
+                        Platform.runLater(() -> {
+                            curController.responseCreateGroup(decodedMessage);
+                        });
+                    }
                 }
             }
         } catch (SocketException e) {

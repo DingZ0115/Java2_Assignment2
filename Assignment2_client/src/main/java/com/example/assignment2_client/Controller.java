@@ -14,8 +14,6 @@ import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
-import javafx.scene.input.KeyCode;
-import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.BorderPane;
@@ -30,6 +28,7 @@ import java.awt.MouseInfo;
 import java.io.*;
 import java.net.URL;
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class Controller implements Initializable {
     @FXML
@@ -62,15 +61,12 @@ public class Controller implements Initializable {
     ImageView exit;
     PrintWriter writer;
     Stage curStage;
-
     String personal_signature;
-
     boolean updateFlag = false;
-
-    String curPrivateChatUser;
-
-
+    String curChat; //当前通信的账户
     HashMap<String, String[]> onlineUserMap = new HashMap<>();
+
+    HashMap<String, String[]> groupMap = new HashMap<>();
 
     @Override
     public void initialize(URL url, ResourceBundle resourceBundle) {
@@ -120,7 +116,21 @@ public class Controller implements Initializable {
     public void sendMsg() {
         try {
             String ss = inputArea.getText();
-            Message message = new Message(new Date(), showMyAccount.getText(), curPrivateChatUser, ss, "chat");
+            Message message;
+            if (onlineUserMap.containsKey(curChat) || showMyAccount.getText().equals(curChat)) {
+                message = new Message(new Date(), showMyAccount.getText(), curChat, ss, "chat");
+            } else {
+                //群聊中curChat存的是群聊号，要给除自己外所有人发消息
+                String[] groupUsers = groupMap.get(curChat);//groupUsers[0]为群聊号，groupUsers[1]为发起人
+                //所有需要发送的人
+                String result = Arrays.stream(groupUsers)
+                        .filter(user -> !user.equals(showMyAccount.getText()))
+                        .collect(Collectors.joining("%"));
+
+                //群号+自己的昵称
+                message = new Message(new Date(), curChat + "%" + showMyName.getText(),
+                        result, ss, "groupChat");
+            }
             String mm = message.serialize();
             writer.println(mm);
             showSendMsg(message);
@@ -148,7 +158,7 @@ public class Controller implements Initializable {
         String[] onlineUsers = info.split("%");
         String[] host = onlineUsers[0].split("\\|");
         personal_signature = host[2];
-        curPrivateChatUser = host[0];
+        curChat = host[0];
         showMyName.setText(host[1]);
         showMyAccount.setText(host[0]);
         showFriendName.setText(host[1]);
@@ -162,7 +172,7 @@ public class Controller implements Initializable {
     public void updateOnlineUserMap(Message newUser) {
         String[] newUserInfo = newUser.data.substring(9).split("\\|");
         onlineUserMap.put(newUserInfo[0], newUserInfo);
-        setAUserPage(newUserInfo);
+        setAUserPage(newUserInfo, false);
         //弹窗提示一个用户来了
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
         alert.setTitle("提醒");
@@ -172,9 +182,13 @@ public class Controller implements Initializable {
     }
 
     public void exitOnlineUserMap(Message exitMsg) {
-        System.out.println(exitMsg.getData());
         String[] info = exitMsg.getData().split("\\|");
         onlineUserMap.remove(info[0]);//从在线列表删除下线用户
+        if (!groupMap.containsKey(curChat)) { //好友退出时，用户处于私聊状态
+            showFriendName.setText(showMyName.getText());
+            msgVBox.getChildren().clear();
+            curChat = showMyAccount.getText();
+        }
         //更新好友列表
         // 获取VBox中的所有子节点列表
         ObservableList<Node> children = friendVBox.getChildren();
@@ -183,8 +197,6 @@ public class Controller implements Initializable {
         for (Node node : children) {
             if (node instanceof AnchorPane) {
                 AnchorPane anchorPane = (AnchorPane) node;
-                System.out.println(exitMsg.getData());
-                System.out.println(anchorPane.getId());
                 if (info[0].equals(anchorPane.getId())) {
                     // 找到了要删除的AnchorPane节点，从VBox中移除它
                     friendVBox.getChildren().remove(anchorPane);
@@ -230,23 +242,33 @@ public class Controller implements Initializable {
     }
 
     public void showRecvMsg(Message msg) {
-        //如果发送方不是上一个发送方，要把对话框清空
-        if (!msg.sendBy.equals(curPrivateChatUser)) {
-            curPrivateChatUser = msg.sendBy;
-            showFriendName.setText(onlineUserMap.get(msg.sendBy)[1]);
-            msgVBox.getChildren().clear();
-        }
         AnchorPane an = new AnchorPane();
         an.setPrefWidth(590);
         ImageView iv = new ImageView(new Image(Objects.requireNonNull(
                 getClass().getResource("/Image/photo2.jpg")).toExternalForm()));
         iv.setFitWidth(40);
         iv.setFitHeight(40);
-        Label l1;
-        if (msg.sendBy.equals(curPrivateChatUser)) {
-            l1 = new Label(showMyName.getText() + " " + msg.getTimestamp());
+        Label l1 = new Label();
+        //如果发送方不是上一个发送方，要把对话框清空
+        if (msg.getMethod().equals("chat")) {
+            if (!msg.sendBy.equals(curChat)) {
+                msgVBox.getChildren().clear();
+                showFriendName.setText(onlineUserMap.get(msg.sendBy)[1]);
+            }
+            if (msg.sendBy.equals(showMyAccount.getText())) {
+                l1.setText(showMyName.getText() + " " + msg.getTimestamp());
+            } else {
+                l1.setText(onlineUserMap.get(msg.sendBy)[1] + " " + msg.getTimestamp());
+            }
+            curChat = msg.sendBy;
         } else {
-            l1 = new Label(onlineUserMap.get(msg.sendBy)[1] + " " + msg.getTimestamp());
+            String[] number_user = msg.getSendBy().split("%");
+            if (!number_user[0].equals(curChat)) {
+                // TODO: msgVBox.getChildren().clear();///不能瞎clear，因为群聊发多少条，curChat都不变
+                showFriendName.setText(number_user[0]);
+            }
+            l1.setText(number_user[1] + " " + msg.getTimestamp());
+            curChat = number_user[0];
         }
         l1.setFont(new Font(13));
         l1.setMaxWidth(400);
@@ -283,6 +305,7 @@ public class Controller implements Initializable {
 
         Set<String> keySet = onlineUserMap.keySet();  // 获取所有的key
         ArrayList<String> selectedUser = new ArrayList<>();
+        selectedUser.add(showMyAccount.getText()); //把本人添加到第一个
         for (String t : keySet) {
             CheckBox cb = new CheckBox(onlineUserMap.get(t)[1]);
             cb.selectedProperty().addListener(new ChangeListener<Boolean>() {
@@ -298,7 +321,6 @@ public class Controller implements Initializable {
             box.getChildren().add(cb);
             box.setMargin(cb, new Insets(10, 10, 0, 10));// 设置间距
         }
-        selectedUser.add(showMyAccount.getText());
         Button button = new Button("确认创建群聊");
         button.setStyle("-fx-background-color:#ffffff");
 
@@ -339,9 +361,20 @@ public class Controller implements Initializable {
 
     public void confirmCreateGroup(ArrayList<String> selectedUser) {
         //这里面存的是account
-        for (String s : selectedUser) {
-            System.out.println(s);
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < selectedUser.size() - 1; i++) {
+            sb.append(selectedUser.get(i) + "%");
         }
+        sb.append(selectedUser.get(selectedUser.size() - 1));
+        //创建一个群聊，名称为xxx,xxx,xxx（3）
+        try {
+            Message message = new Message(new Date(), showMyAccount.getText(), "0", sb.toString(), "createGroup");
+            String mm = message.serialize();
+            writer.println(mm);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
     }
 
     public void exitLogin() {
@@ -429,30 +462,43 @@ public class Controller implements Initializable {
         //根据map生成在线用户页面
         //把自己放最上面，然后是别人
         String[] personalValue = {showMyAccount.getText(), showMyName.getText(), personal_signature};
-        setAUserPage(personalValue);
+        setAUserPage(personalValue, false);
         for (Map.Entry<String, String[]> entry : onlineUserMap.entrySet()) {
             if (!entry.getKey().equals(showMyAccount.getText())) {
-                setAUserPage(entry.getValue());
+                setAUserPage(entry.getValue(), false);
             }
         }
     }
 
-    public void setAUserPage(String[] value) {
+    public void setAUserPage(String[] value, boolean groupOrNot) {
         String[] imgs = {"photo1.jpg", "photo2.jpg", "photo3.jpg", "photo4.jpg"};
         int count = (int) (Math.random() * 100);
         AnchorPane an = new AnchorPane();
-        //给这个组件设置唯一标识
-        an.setId(value[0]);
-
-        an.setPrefHeight(60);
-        ImageView iv = new ImageView(new Image(Objects.requireNonNull(getClass().getResource("/Image/" + imgs[count % 4])).toExternalForm()));
+        ImageView iv = new ImageView(new Image(Objects.requireNonNull(getClass().
+                getResource("/Image/" + imgs[count % 4])).toExternalForm()));
         iv.setFitWidth(40);
         iv.setFitHeight(40);
-
-        Label l1 = new Label(value[1]);
+        //给这个组件设置唯一标识
+        an.setId(value[0]);
+        an.setPrefHeight(60);
+        Label l1;
+        Label l2;
+        if (groupOrNot) {
+            l1 = new Label(value[0]);
+            StringBuilder sb = new StringBuilder();
+            sb.append("群聊成员：");
+            for (int i = 1; i < value.length; i++) {
+                sb.append(value[i]).append(" ");
+            }
+            l2 = new Label(sb.toString());
+            Tooltip tooltip = new Tooltip(sb.toString());
+            l2.setTooltip(tooltip);
+        } else {
+            l1 = new Label(value[1]);
+            l2 = new Label(value[2]);
+        }
         l1.setFont(new Font(15));
         l1.setMaxWidth(160);
-        Label l2 = new Label(value[2]);
         l2.setFont(new Font(12));
         l2.setMaxWidth(160);
         l2.setTextFill(Paint.valueOf("#aba6a6"));
@@ -465,7 +511,6 @@ public class Controller implements Initializable {
         AnchorPane.setLeftAnchor(l2, 91.0);
         AnchorPane.setTopAnchor(l2, 36.0);
         friendVBox.getChildren().add(an);
-
         an.setOnMouseMoved(new EventHandler<MouseEvent>() {
             @Override
             public void handle(MouseEvent arg0) {
@@ -476,11 +521,26 @@ public class Controller implements Initializable {
             @Override
             public void handle(MouseEvent event) {
                 showFriendName.setText(l1.getText());
-                if (!value[0].equals(curPrivateChatUser)) {
-                    curPrivateChatUser = value[0];
+                if (!value[0].equals(curChat)) {
+                    curChat = value[0];
+                    System.out.println("curChat " + curChat);
                     msgVBox.getChildren().clear();//清空聊天框的内容
                 }
             }
         });
+    }
+
+    public void responseCreateGroup(Message msg) {
+        //提醒包括本人在内的所有人创建了群聊，更新这些人的群聊列表
+        String[] groupInfo = msg.getData().split("%");
+        String groupNumber = groupInfo[0];
+        groupMap.put(groupNumber, groupInfo);
+        setAUserPage(groupInfo, true);
+        String hostUser = msg.getSendBy().split("\\|")[1];
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle("提醒");
+        alert.setHeaderText("群组提醒");
+        alert.setContentText("您已加入由" + hostUser + "创建的群聊" + groupNumber);
+        alert.showAndWait();
     }
 }
