@@ -136,7 +136,7 @@ public class Controller implements Initializable {
                         .collect(Collectors.joining("%"));
 
                 //群号+自己的昵称
-                message = new Message(new Date(), curChat + "%" + showMyName.getText() + "%" + showMyAccount,
+                message = new Message(new Date(), curChat + "%" + showMyName.getText() + "%" + showMyAccount.getText(),
                         result, ss, "groupChat");
                 speakingPerson = showMyAccount.getText();
             }

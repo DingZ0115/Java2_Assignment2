@@ -66,107 +66,15 @@ public class ServerThread extends Thread {
             conn = DriverManager.getConnection(url, user, password);
 
             switch (message.getMethod()) {
-                case "signIn" -> {
-                    String[] accountAndPasswd = message.data.split("%");
-                    String xx = "";
-                    if (clients.containsKey(accountAndPasswd[0])) {
-                        xx = "Already login";
-                    } else if (!clients.containsKey(accountAndPasswd[0])) {
-                        PreparedStatement pstmt = conn.prepareStatement("SELECT * FROM users WHERE account = ? AND passwd = ?;");
-                        pstmt.setString(1, accountAndPasswd[0]);
-                        pstmt.setString(2, accountAndPasswd[1]);
-                        ResultSet rs = pstmt.executeQuery();
-                        boolean flag = rs.next();
-                        // 处理查询结果
-                        if (flag) {//上线成功
-                            //向列表中添加一个新用户，更新Main中的列表，返回前端所有当前在线的用户
-                            String nameAndSignature = accountAndPasswd[0] + "|"
-                                    + rs.getString("user_name") + "|"
-                                    + rs.getString("personal_signature");
-                            System.out.println("用户" + accountAndPasswd[0] + "来了");
-                            StringBuilder sb = new StringBuilder();
-                            sb.append("responseSignIn-Yes");
-                            sb.append("%");
-                            sb.append(nameAndSignature);
-                            Set<String> keySet = clients.keySet();  // 获取所有的key
-                            for (String key : keySet) {
-                                sb.append("%");
-                                String[] oneClientInfo = clientsInfo.get(key).split("\\|");
-                                sb.append(oneClientInfo[0]);
-                                sb.append("|");
-                                sb.append(oneClientInfo[1]);
-                                sb.append("|");
-                                sb.append(oneClientInfo[2]);
-                            }
-                            xx = sb.toString();
-                            String broadcast = "AUserCome" + nameAndSignature;
-                            //更新所有其他用户的在线用户列表
-                            for (String key : keySet) {
-                                Socket toSocket = clients.get(key);
-                                Message transMessage = new Message(new Date(), "server", key, broadcast, "broadcast");
-                                String mm = transMessage.serialize();
-                                OutputStream out = toSocket.getOutputStream();
-                                PrintWriter w = new PrintWriter(out, true);
-                                w.println(mm);
-                            }
-                            clients.put(accountAndPasswd[0], socket);
-                            clientsInfo.put(accountAndPasswd[0], nameAndSignature);
-                            Main.setClients(clients);
-                            Main.setClientsInfo(clientsInfo);
-                            rs.close();
-                            pstmt.close();
-                        }
-                    } else {
-                        xx = "responseSignIn-No";
-                    }
-                    Message response = new Message(new Date(), "0", "0", xx, "responseSignIn");
-                    String mm = response.serialize();
-                    writer.println(mm);
-                    break;
-                }
-                case "signUp" -> {
-                    String[] information = message.data.split("%");
-                    PreparedStatement pstmt0 = conn.prepareStatement("SELECT * FROM users WHERE account = ? ;");
-                    pstmt0.setString(1, information[1]);
-                    ResultSet rs = pstmt0.executeQuery();
-                    boolean flag = !rs.next();
-                    pstmt0.close();
-                    rs.close();
-                    // 处理查询结果
-                    String xx;
-                    if (flag) {
-                        PreparedStatement pstmt = conn.prepareStatement("INSERT INTO users (user_name, account, passwd)\n" +
-                                "VALUES (?, ?, ?);");
-
-                        pstmt.setString(1, information[0]);
-                        pstmt.setString(2, information[1]);
-                        pstmt.setString(3, information[2]);
-                        int rowsAffected = pstmt.executeUpdate();
-                        if (rowsAffected > 0) {
-                            xx = "responseSignUp-Yes";
-                            System.out.println("插入成功！");
-                        } else {
-                            xx = "responseSignUp-No";
-                            System.out.println("插入失败！");
-                        }
-                        pstmt.close();
-                    } else {
-                        xx = "responseSignUp-No";
-                        System.out.println("插入失败！");
-                    }
-                    Message response = new Message(new Date(), "0", "0", xx, "responseSignUp");
-                    String mm = response.serialize();
-                    writer.println(mm);
-                    break;
-                }
+                case "signIn" -> dealSignIn(message, conn);
+                case "signUp" -> dealSignUp(message, conn);
                 case "exit" -> dealExit(message);
-                case "createGroup" ->
-                    //给所有被选中的人发通知，被加入了群聊
-                    //在数据库里面创建群聊，给出对应的群聊号，把群聊号返回前端。前端存群聊号，群聊人[]
-                        dealCreateGroup(message);
-                case "groupChat" -> dealGroupChat(message);
+                case "createGroup" -> dealCreateGroup(message, conn);
+                //给所有被选中的人发通知，被加入了群聊
+                //在数据库里面创建群聊，给出对应的群聊号，把群聊号返回前端。前端存群聊号，群聊人[]
+                case "groupChat" -> dealGroupChat(message, conn);
                 case "PrivateSendFile" -> dealPrivateSendFile(message);
-                default -> dealChat(message);
+                default -> dealChat(message, conn);
             }
         } catch (ClassNotFoundException e) {
             System.err.println("Could not find the PostgreSQL JDBC driver class.");
@@ -187,17 +95,127 @@ public class ServerThread extends Thread {
         }
     }
 
-    public void dealChat(Message m) {
+    public void dealSignIn(Message message, Connection conn) {
         try {
-            String sendTo = m.getSendTo();
-            Socket toSocket = clients.get(sendTo);
-            Message transMessage = new Message(new Date(), m.getSendBy(), sendTo, m.getData(), "chat");
-            String mm = transMessage.serialize();
-            OutputStream out = toSocket.getOutputStream();
-            PrintWriter w = new PrintWriter(out, true);
-            w.println(mm);
+            String[] accountAndPasswd = message.data.split("%");
+            String xx = "";
+            if (clients.containsKey(accountAndPasswd[0])) {
+                xx = "Already login";
+            } else if (!clients.containsKey(accountAndPasswd[0])) {
+                PreparedStatement pstmt = conn.prepareStatement("SELECT * FROM users WHERE account = ? AND passwd = ?;");
+                pstmt.setString(1, accountAndPasswd[0]);
+                pstmt.setString(2, accountAndPasswd[1]);
+                ResultSet rs = pstmt.executeQuery();
+                boolean flag = rs.next();
+                // 处理查询结果
+                if (flag) {//上线成功
+                    //向列表中添加一个新用户，更新Main中的列表，返回前端所有当前在线的用户
+                    String nameAndSignature = accountAndPasswd[0] + "|"
+                            + rs.getString("user_name") + "|"
+                            + rs.getString("personal_signature");
+                    System.out.println("用户" + accountAndPasswd[0] + "来了");
+                    StringBuilder sb = new StringBuilder();
+                    sb.append("responseSignIn-Yes");
+                    sb.append("%");
+                    sb.append(nameAndSignature);
+                    Set<String> keySet = clients.keySet();  // 获取所有的key
+                    for (String key : keySet) {
+                        sb.append("%");
+                        String[] oneClientInfo = clientsInfo.get(key).split("\\|");
+                        sb.append(oneClientInfo[0]);
+                        sb.append("|");
+                        sb.append(oneClientInfo[1]);
+                        sb.append("|");
+                        sb.append(oneClientInfo[2]);
+                    }
+                    xx = sb.toString();
+                    String broadcast = "AUserCome" + nameAndSignature;
+                    //更新所有其他用户的在线用户列表
+                    for (String key : keySet) {
+                        Socket toSocket = clients.get(key);
+                        Message transMessage = new Message(new Date(), "server", key, broadcast, "broadcast");
+                        String mm = transMessage.serialize();
+                        OutputStream out = toSocket.getOutputStream();
+                        PrintWriter w = new PrintWriter(out, true);
+                        w.println(mm);
+                    }
+                    clients.put(accountAndPasswd[0], socket);
+                    clientsInfo.put(accountAndPasswd[0], nameAndSignature);
+                    Main.setClients(clients);
+                    Main.setClientsInfo(clientsInfo);
+                    rs.close();
+                    pstmt.close();
+                }
+            } else {
+                xx = "responseSignIn-No";
+            }
+            Message response = new Message(new Date(), "0", "0", xx, "responseSignIn");
+            String mm = response.serialize();
+            writer.println(mm);
+        } catch (SQLException | IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public void dealSignUp(Message message, Connection conn) {
+        try {
+            String[] information = message.data.split("%");
+            PreparedStatement pstmt0 = conn.prepareStatement("SELECT * FROM users WHERE account = ? ;");
+            pstmt0.setString(1, information[1]);
+            ResultSet rs = pstmt0.executeQuery();
+            boolean flag = !rs.next();
+            pstmt0.close();
+            rs.close();
+            // 处理查询结果
+            String xx;
+            if (flag) {
+                PreparedStatement pstmt = conn.prepareStatement("INSERT INTO users (user_name, account, passwd)\n" +
+                        "VALUES (?, ?, ?);");
+                pstmt.setString(1, information[0]);
+                pstmt.setString(2, information[1]);
+                pstmt.setString(3, information[2]);
+                int rowsAffected = pstmt.executeUpdate();
+                if (rowsAffected > 0) {
+                    xx = "responseSignUp-Yes";
+                    System.out.println("插入成功！");
+                } else {
+                    xx = "responseSignUp-No";
+                    System.out.println("插入失败！");
+                }
+                pstmt.close();
+            } else {
+                xx = "responseSignUp-No";
+                System.out.println("插入失败！");
+            }
+            Message response = new Message(new Date(), "0", "0", xx, "responseSignUp");
+            String mm = response.serialize();
+            writer.println(mm);
+        } catch (SQLException | IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public void dealChat(Message m, Connection conn) {
+        try {
+            PreparedStatement pstmt = conn.prepareStatement("INSERT INTO private_chat_list (content, time, sendby_account, sendto_account) VALUES (?,?,?,?);");
+            pstmt.setString(1, m.getData());
+            pstmt.setString(2, m.getTimestamp().toString());
+            pstmt.setString(3, m.getSendBy());
+            pstmt.setString(4, m.getSendTo());
+
+            int rowsAffected = pstmt.executeUpdate();
+            if (rowsAffected > 0) {
+                Socket toSocket = clients.get(m.getSendTo());
+                Message transMessage = new Message(new Date(), m.getSendBy(), m.getSendTo(), m.getData(), "chat");
+                String mm = transMessage.serialize();
+                OutputStream out = toSocket.getOutputStream();
+                PrintWriter w = new PrintWriter(out, true);
+                w.println(mm);
+            }
         } catch (IOException ex) {
             ex.printStackTrace();
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
         }
     }
 
@@ -215,43 +233,73 @@ public class ServerThread extends Thread {
         }
     }
 
-    public void dealGroupChat(Message m) {
-        //给所有groupUsers中的所有人发消息，被加入了群聊
-        String[] groupUsers = m.getSendTo().split("%");
-        for (String groupUser : groupUsers) {
-            try {
-                if (clients.containsKey(groupUser)) {
-                    Socket toSocket = clients.get(groupUser);
-                    Message transMessage = new Message(new Date(), m.sendBy,
-                            groupUser, m.getData(), "broadcastGroupChat");
-                    String mm = transMessage.serialize();
-                    OutputStream out = toSocket.getOutputStream();
-                    PrintWriter w = new PrintWriter(out, true);
-                    w.println(mm);
+    public void dealGroupChat(Message m, Connection conn) {
+        try {
+            String[] sendBy = m.getSendBy().split("%");  //[0]为群号，[1]为发消息人的昵称，[2]为发消息人账号
+            //把这条消息放到数据库
+            PreparedStatement pstmt = conn.prepareStatement("INSERT INTO group_chat_list(group_id, content, time, user_account) VALUES(?,?,?,?);");
+            pstmt.setInt(1, Integer.parseInt(sendBy[0]));
+            pstmt.setString(2, m.getData());
+            pstmt.setString(3, m.getTimestamp().toString());
+            pstmt.setString(4, sendBy[2]);
+
+            int rowsAffected = pstmt.executeUpdate();
+            if (rowsAffected > 0) {
+                //给所有groupUsers中的所有人发消息，被加入了群聊
+                String[] groupUsers = m.getSendTo().split("%");
+                for (String groupUser : groupUsers) {
+                    try {
+                        if (clients.containsKey(groupUser)) {
+                            Socket toSocket = clients.get(groupUser);
+                            Message transMessage = new Message(new Date(), m.sendBy,
+                                    groupUser, m.getData(), "broadcastGroupChat");
+                            String mm = transMessage.serialize();
+                            OutputStream out = toSocket.getOutputStream();
+                            PrintWriter w = new PrintWriter(out, true);
+                            w.println(mm);
+                        }
+                    } catch (IOException ex) {
+                        ex.printStackTrace();
+                    }
                 }
-            } catch (IOException ex) {
-                ex.printStackTrace();
             }
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
         }
     }
 
-    public void dealCreateGroup(Message message) {
-        String[] groupUsers = message.getData().split("%");
-        for (String groupUser : groupUsers) {
-            try {
-                String groupUserInfo = "1234567" + "%" + message.getData();
-                if (clients.containsKey(groupUser)) {
-                    Socket toSocket = clients.get(groupUser);
-                    Message transMessage = new Message(new Date(), clientsInfo.get(message.sendBy), groupUser,
-                            groupUserInfo, "broadcastCreateGroup");
-                    String mm = transMessage.serialize();
-                    OutputStream out = toSocket.getOutputStream();
-                    PrintWriter w = new PrintWriter(out, true);
-                    w.println(mm);
+    public void dealCreateGroup(Message message, Connection conn) {
+        try {
+            String[] groupUsers = message.getData().split("%");
+
+            PreparedStatement pstmt = conn.prepareStatement("INSERT INTO groups (group_name) VALUES (?);",
+                    Statement.RETURN_GENERATED_KEYS);
+            pstmt.setString(1, message.getData());
+            pstmt.executeUpdate();
+            ResultSet rs = pstmt.getGeneratedKeys();
+            if (rs.next()) {
+                int groupNumber = rs.getInt(1);
+                //通知所有人
+                for (String groupUser : groupUsers) {
+                    try {
+                        String groupUserInfo = groupNumber + "%" + message.getData();
+                        if (clients.containsKey(groupUser)) {
+                            Socket toSocket = clients.get(groupUser);
+                            Message transMessage = new Message(new Date(), clientsInfo.get(message.sendBy), groupUser,
+                                    groupUserInfo, "broadcastCreateGroup");
+                            String mm = transMessage.serialize();
+                            OutputStream out = toSocket.getOutputStream();
+                            PrintWriter w = new PrintWriter(out, true);
+                            w.println(mm);
+                        }
+                    } catch (IOException ex) {
+                        throw new RuntimeException(ex);
+                    }
                 }
-            } catch (IOException ex) {
-                throw new RuntimeException(ex);
             }
+            pstmt.close();
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
         }
     }
 
