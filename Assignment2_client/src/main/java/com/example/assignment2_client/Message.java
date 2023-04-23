@@ -8,15 +8,10 @@ import java.io.*;
 import java.util.Date;
 
 public class Message implements Serializable {
-
     Date timestamp;
-
     String sendBy;
-
     String sendTo;
-
     String data;
-
     String method;
 
     @JsonCreator

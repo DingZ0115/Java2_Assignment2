@@ -4,14 +4,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import javafx.application.Platform;
 import javafx.scene.control.Alert;
 import javafx.scene.control.ButtonType;
-import javafx.scene.image.Image;
-import javafx.stage.Stage;
 
 import java.io.*;
 import java.net.Socket;
 import java.net.SocketException;
-import java.util.Date;
-import java.util.Objects;
 import java.util.Optional;
 
 public class ThreadReader extends Thread {
@@ -65,6 +61,11 @@ public class ThreadReader extends Thread {
                         });
                     }
                     case "TransferFile" -> curController.saveFile(decodedMessage);
+                    case "getPrivateHistory", "getGroupHistory" -> {
+                        Platform.runLater(() -> {
+                            curController.showHistory(decodedMessage);
+                        });
+                    }
                 }
             }
         } catch (SocketException e) {

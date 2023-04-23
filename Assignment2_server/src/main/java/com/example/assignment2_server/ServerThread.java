@@ -8,11 +8,10 @@ import java.net.SocketException;
 import java.sql.*;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.*;
 import java.util.Date;
-import java.util.HashMap;
-import java.util.Locale;
-import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
+import java.util.stream.Collectors;
 
 public class ServerThread extends Thread {
     Socket socket;
@@ -77,6 +76,11 @@ public class ServerThread extends Thread {
                 //在数据库里面创建群聊，给出对应的群聊号，把群聊号返回前端。前端存群聊号，群聊人[]
                 case "groupChat" -> dealGroupChat(message, conn);
                 case "PrivateSendFile" -> dealPrivateSendFile(message);
+                case "getPrivateHistory" ->
+                        getHistory(message.getSendBy(), message.getData(), conn, "getPrivateHistory");
+                case "getPrivateInitialHistory" ->
+                        getHistory(message.getSendBy(), message.getData(), conn, "getPrivateInitialHistory");
+                case "getGroupHistory" -> getGroupHistroy(message, conn);
                 default -> dealChat(message, conn);
             }
         } catch (ClassNotFoundException e) {
@@ -122,6 +126,24 @@ public class ServerThread extends Thread {
                     sb.append("%");
                     sb.append(nameAndSignature);
                     Set<String> keySet = clients.keySet();  // 获取所有的key
+                    //把key按照聊天时间进行排序
+                    PreparedStatement getChatTime = conn.prepareStatement(
+                            "SELECT * FROM private_chat_list WHERE sendby_account = ?  OR sendto_account = ?");
+                    getChatTime.setString(1, accountAndPasswd[0]);
+                    getChatTime.setString(2, accountAndPasswd[0]);
+                    ResultSet timeUser = getChatTime.executeQuery();
+                    HashMap<String, Date> timeUserMap = new HashMap<>();
+                    while (timeUser.next()) {
+                        String from = timeUser.getString("sendby_account");
+                        String to = timeUser.getString("sendto_account");
+                        Date time = format.parse(timeUser.getString("time"));
+                        if (!from.equals(accountAndPasswd[0])) {
+                            timeUserMap.put(from, time);
+                        } else if (!to.equals(accountAndPasswd[0])) {
+                            timeUserMap.put(to, time);
+                        }
+                    }
+
                     for (String key : keySet) {
                         sb.append("%");
                         String[] oneClientInfo = clientsInfo.get(key).split("\\|");
@@ -130,6 +152,12 @@ public class ServerThread extends Thread {
                         sb.append(oneClientInfo[1]);
                         sb.append("|");
                         sb.append(oneClientInfo[2]);
+                        sb.append("|");
+                        if (timeUserMap.containsKey(key)) {
+                            sb.append(timeUserMap.get(key));
+                        } else {
+                            sb.append(new Date(0));
+                        }
                     }
                     xx = sb.toString();
                     String broadcast = "AUserCome" + nameAndSignature;
@@ -156,9 +184,7 @@ public class ServerThread extends Thread {
             String mm = response.serialize();
             writer.println(mm);
             Thread.sleep(200);
-            //一个用户上线成功后要更新自己初始的聊天记录
-            getHistory(accountAndPasswd[0], accountAndPasswd[0], conn);
-        } catch (SQLException | IOException | InterruptedException e) {
+        } catch (SQLException | IOException | InterruptedException | ParseException e) {
             throw new RuntimeException(e);
         }
     }
@@ -175,11 +201,12 @@ public class ServerThread extends Thread {
             // 处理查询结果
             String xx;
             if (flag) {
-                PreparedStatement pstmt = conn.prepareStatement("INSERT INTO users (user_name, account, passwd)\n" +
-                        "VALUES (?, ?, ?);");
+                PreparedStatement pstmt = conn.prepareStatement("INSERT INTO users (user_name, account, passwd,personal_signature)\n" +
+                        "VALUES (?, ?, ?, ?);");
                 pstmt.setString(1, information[0]);
                 pstmt.setString(2, information[1]);
                 pstmt.setString(3, information[2]);
+                pstmt.setString(4, information[3]);
                 int rowsAffected = pstmt.executeUpdate();
                 if (rowsAffected > 0) {
                     xx = "responseSignUp-Yes";
@@ -332,18 +359,23 @@ public class ServerThread extends Thread {
         }
     }
 
-
-    public void getHistory(String sendBy, String sendTo, Connection conn) {
+    public void getHistory(String requestUser, String curChat, Connection conn, String method) {
         try {
-            PreparedStatement pstmt = conn.prepareStatement("SELECT * FROM private_chat_list WHERE sendby_account = ? AND sendto_account = ?");
-            pstmt.setString(1, sendBy);
-            pstmt.setString(2, sendTo);
+            PreparedStatement pstmt = conn.prepareStatement(
+                    "SELECT * FROM private_chat_list WHERE (sendby_account = ? AND sendto_account = ?) " +
+                            "OR (sendby_account = ? AND sendto_account = ?)");
+            pstmt.setString(1, requestUser);
+            pstmt.setString(2, curChat);
+            pstmt.setString(3, curChat);
+            pstmt.setString(4, requestUser);
             ResultSet rs = pstmt.executeQuery();
             while (rs.next()) {
                 String content = rs.getString("content");
                 String time = rs.getString("time");
-                Message msg = new Message(format.parse(time), sendBy, sendTo, content, "getPrivateInitialHistory");
-                Socket toSocket = clients.get(sendTo);
+                String user1 = rs.getString("sendby_account");
+                String user2 = rs.getString("sendto_account");
+                Message msg = new Message(format.parse(time), user1, user2, content, method);
+                Socket toSocket = clients.get(requestUser);
                 String mm = msg.serialize();
                 OutputStream out = toSocket.getOutputStream();
                 PrintWriter w = new PrintWriter(out, true);
@@ -355,4 +387,37 @@ public class ServerThread extends Thread {
             throw new RuntimeException(e);
         }
     }
+
+    public void getGroupHistroy(Message message, Connection conn) {
+        String requestUser = message.getSendBy();
+        String groupNumber = message.getData();
+        try {
+            PreparedStatement pstmt = conn.prepareStatement("SELECT * FROM group_chat_list WHERE group_id = ?");
+            pstmt.setInt(1, Integer.parseInt(groupNumber));
+            ResultSet rs = pstmt.executeQuery();
+            while (rs.next()) {
+                String content = rs.getString("content");
+                String time = rs.getString("time");
+                String spokenUser = rs.getString("user_account");
+                PreparedStatement checkName = conn.prepareStatement("SELECT * FROM users WHERE account = ?");
+                checkName.setString(1, spokenUser);
+                ResultSet checkNameRS = checkName.executeQuery();
+                if (checkNameRS.next()) {
+                    String spokenUserName = checkNameRS.getString("user_name");
+                    Message msg = new Message(format.parse(time), spokenUser, spokenUserName, content, "getGroupHistory");
+                    Socket toSocket = clients.get(requestUser);
+                    String mm = msg.serialize();
+                    OutputStream out = toSocket.getOutputStream();
+                    PrintWriter w = new PrintWriter(out, true);
+                    w.println(mm);
+                }
+                checkName.close();
+            }
+            rs.close();
+            pstmt.close();
+        } catch (SQLException | ParseException | IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
 }
+

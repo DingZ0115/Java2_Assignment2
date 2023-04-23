@@ -1,6 +1,5 @@
 package com.example.assignment2_client;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
@@ -20,10 +19,8 @@ import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.VBox;
-import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import javafx.scene.text.Font;
-import javafx.scene.text.Text;
 import javafx.scene.text.TextAlignment;
 import javafx.stage.FileChooser;
 import javafx.stage.Modality;
@@ -32,6 +29,8 @@ import javafx.stage.Stage;
 import java.awt.MouseInfo;
 import java.io.*;
 import java.net.URL;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -68,24 +67,30 @@ public class Controller implements Initializable {
     Stage curStage;
     String personal_signature;
     String curChat; //当前通信的账户
-    HashMap<String, String[]> onlineUserMap = new HashMap<>();
-
+    HashMap<String, String[]> onlineUserMap = new HashMap<>();//账户; 账户，昵称，个性签名，最近聊天时间
     HashMap<String, String[]> groupMap = new HashMap<>();
     String speakingPerson; //群聊里面发言的人，在用户发言和用户收到信息都要更新
-    boolean changeFlag;
+
 
     @Override
     public void initialize(URL url, ResourceBundle resourceBundle) {
         inputArea.setFont(new Font(14));
         msgSCP.setVvalue(1.0);
+//        msgSCP.vvalueProperty().addListener(new ChangeListener<Number>() {
+//            @Override
+//            public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) {
+//                msgSCP.setVvalue(1.0);
+//            }
+//        });
         msgSCP.vvalueProperty().addListener(new ChangeListener<Number>() {
             @Override
             public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) {
-                if (changeFlag) {
-                    msgSCP.setVvalue(msgVBox.getHeight());
-                    changeFlag = false;
-                }
+                msgSCP.setVvalue(msgSCP.getVvalue());
             }
+        });
+        msgVBox.heightProperty().addListener((observable, oldValue, newValue) -> {
+            // 将滚动条自动滚动到底部
+            msgSCP.setVvalue(1.0);
         });
         portrait.setOnMouseMoved(new EventHandler<MouseEvent>() {
             @Override
@@ -173,6 +178,8 @@ public class Controller implements Initializable {
             String[] user = onlineUsers[i].split("\\|");
             onlineUserMap.put(user[0], user);
         }
+        //一个用户上线成功后要更新自己初始的聊天记录
+        getHistory();
         setOnlineUsersPage();
     }
 
@@ -191,11 +198,14 @@ public class Controller implements Initializable {
     public void exitOnlineUserMap(Message exitMsg) {
         String[] info = exitMsg.getData().split("\\|");
         onlineUserMap.remove(info[0]);//从在线列表删除下线用户
-        if (!groupMap.containsKey(curChat)) { //好友退出时，用户处于私聊状态
+        if (!groupMap.containsKey(curChat)) { //好友退出时，用户处于私聊状态，返回到自己跟自己的聊天
             showFriendName.setText(showMyName.getText());
             msgVBox.getChildren().clear();
             curChat = showMyAccount.getText();
-        }
+            getHistory();
+        }  //处在群聊中好友退出时，不变化
+
+
         //更新好友列表
         // 获取VBox中的所有子节点列表
         ObservableList<Node> children = friendVBox.getChildren();
@@ -265,16 +275,19 @@ public class Controller implements Initializable {
         Label l2 = new Label();
         //如果发送方不是上一个发送方，要把对话框清空
         if (msg.getMethod().equals("chat")) {  //私聊收到消息
-            if (!msg.sendBy.equals(curChat)) {
+            if (!msg.sendBy.equals(curChat)) { //如果发送方不是上一个发送方，要把对话框清空
                 msgVBox.getChildren().clear();
+                curChat = msg.sendBy;
+                getHistory();
                 showFriendName.setText(onlineUserMap.get(msg.sendBy)[1]);
+                return;
             }
             if (msg.sendBy.equals(showMyAccount.getText())) {
+                //用户登录的初始状态
                 l1.setText(showMyName.getText() + " " + msg.getTimestamp());
             } else {
                 l1.setText(onlineUserMap.get(msg.sendBy)[1] + " " + msg.getTimestamp());
             }
-            curChat = msg.sendBy;
         } else if (msg.getMethod().equals("getPrivateInitialHistory")) { //用户登录初始
             l1.setText(showMyName.getText() + " " + msg.getTimestamp());
             l2.setText(msg.data);
@@ -284,8 +297,8 @@ public class Controller implements Initializable {
                 // TODO: 不能瞎clear，因为群聊发多少条，curChat都不变
                 if (!number_user[2].equals(speakingPerson)) {
                     msgVBox.getChildren().clear();
-                    showFriendName.setText(number_user[0]);
                 }
+                showFriendName.setText(number_user[0]);
             }
             l1.setText(number_user[1] + " " + msg.getTimestamp());
             curChat = number_user[0];
@@ -476,7 +489,27 @@ public class Controller implements Initializable {
         //把自己放最上面，然后是别人
         String[] personalValue = {showMyAccount.getText(), showMyName.getText(), personal_signature};
         setAUserPage(personalValue, false);
-        for (Map.Entry<String, String[]> entry : onlineUserMap.entrySet()) {
+        List<Map.Entry<String, String[]>> sortedEntries = new ArrayList<>(onlineUserMap.entrySet());
+        SimpleDateFormat format = new SimpleDateFormat("EEE MMM dd HH:mm:ss zzz yyyy", Locale.US);
+        Collections.sort(sortedEntries, new Comparator<Map.Entry<String, String[]>>() {
+            @Override
+            public int compare(Map.Entry<String, String[]> o1, Map.Entry<String, String[]> o2) {
+                String[] value1 = o1.getValue();
+                String[] value2 = o2.getValue();
+                // Convert time string to Date objects for comparison
+                Date date1 = null;
+                Date date2 = null;
+                try {
+                    date1 = format.parse(value1[3]);
+                    date2 = format.parse(value2[3]);
+                } catch (ParseException e) {
+                    e.printStackTrace();
+                }
+                // Sort in descending order by date
+                return -1 * date1.compareTo(date2);
+            }
+        });
+        for (Map.Entry<String, String[]> entry : sortedEntries) {
             if (!entry.getKey().equals(showMyAccount.getText())) {
                 setAUserPage(entry.getValue(), false);
             }
@@ -533,14 +566,37 @@ public class Controller implements Initializable {
         an.setOnMouseClicked(new EventHandler<MouseEvent>() {
             @Override
             public void handle(MouseEvent event) {
+                //点击窗口进行切换
                 showFriendName.setText(l1.getText());
                 if (!value[0].equals(curChat)) {
                     curChat = value[0];
                     System.out.println("curChat " + curChat);
                     msgVBox.getChildren().clear();//清空聊天框的内容
+                    //获得新窗口的记录
+                    getHistory();
                 }
             }
         });
+    }
+
+    public void getHistory() {
+        try {
+            String method = "";
+            if (groupMap.containsKey(curChat)) {//切换到了群聊
+                method = "getGroupHistory";
+            } else {//切换到了私聊
+                if (curChat.equals(showMyAccount.getText())) {
+                    method = "getPrivateInitialHistory";
+                } else {
+                    method = "getPrivateHistory";
+                }
+            }
+            Message message = new Message(new Date(), showMyAccount.getText(), "0", curChat, method);
+            String mm = message.serialize();
+            writer.println(mm);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     public void responseCreateGroup(Message msg) {
@@ -665,4 +721,51 @@ public class Controller implements Initializable {
         ois.close();
         return o;
     }
+
+    public void showHistory(Message msg) {
+        //私聊 sendBy是user1，sendTo是user2
+        //群聊 sendBy是正在说话的人,sendTo是正在说话人的昵称
+        AnchorPane an = new AnchorPane();
+        an.setPrefWidth(590);
+        ImageView iv;
+        Label l1 = new Label();
+        Label l2 = new Label(msg.getData());
+        l2.setText(msg.getData());
+
+        l1.setFont(new Font(13));
+        l1.setMaxWidth(400);
+        l2.setFont(new Font(18));
+        l2.setPadding(new Insets(5, 10, 5, 10));
+        l2.setMaxWidth(400);
+        l2.setWrapText(true);
+        if (!msg.getSendBy().equals(showMyAccount.getText())) {//对方发的
+            iv = new ImageView(new Image(Objects.requireNonNull(
+                    getClass().getResource("/Image/photo2.jpg")).toExternalForm()));
+            l1.setText(msg.getSendTo() + " " + msg.getTimestamp());
+            l2.setStyle("-fx-background-color: #55a3ec;-fx-background-radius: 8;");
+            AnchorPane.setLeftAnchor(iv, 22.0);
+            AnchorPane.setTopAnchor(iv, 23.0);
+            AnchorPane.setLeftAnchor(l1, 76.0);
+            AnchorPane.setTopAnchor(l1, 23.0);
+            AnchorPane.setLeftAnchor(l2, 76.0);
+            AnchorPane.setTopAnchor(l2, 51.0);
+        } else {//自己发的
+            iv = new ImageView(new Image(Objects.requireNonNull(
+                    getClass().getResource("/Image/photo1.jpg")).toExternalForm()));
+            l1.setText(msg.getTimestamp() + " " + showMyAccount.getText());
+            l1.setTextAlignment(TextAlignment.RIGHT);
+            l2.setStyle("-fx-background-color: #ffffff;-fx-background-radius: 8;");
+            AnchorPane.setLeftAnchor(iv, 537.0);
+            AnchorPane.setTopAnchor(iv, 25.0);
+            AnchorPane.setRightAnchor(l1, 56.0);
+            AnchorPane.setTopAnchor(l1, 25.0);
+            AnchorPane.setRightAnchor(l2, 56.0);
+            AnchorPane.setTopAnchor(l2, 55.0);
+        }
+        iv.setFitWidth(40);
+        iv.setFitHeight(40);
+        an.getChildren().addAll(iv, l1, l2);
+        msgVBox.getChildren().add(an);
+    }
+
 }

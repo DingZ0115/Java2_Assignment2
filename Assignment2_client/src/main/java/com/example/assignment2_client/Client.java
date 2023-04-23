@@ -70,10 +70,12 @@ public class Client extends Application {
         RegisterPasswordLabel.setFont(Font.font("T", FontWeight.LIGHT, FontPosture.ITALIC, 20));
         Label RegisterIDLabel = new Label("用户名:");
         RegisterIDLabel.setFont(Font.font("T", FontWeight.LIGHT, FontPosture.ITALIC, 20));
+        Label RegisterSignatureLabel = new Label("个性签名:");
+        RegisterSignatureLabel.setFont(Font.font("T", FontWeight.LIGHT, FontPosture.ITALIC, 20));
 
         Button RegisterOkButton = new Button("注册");
         RegisterOkButton.setTranslateX(220);
-        RegisterOkButton.setTranslateY(400);
+        RegisterOkButton.setTranslateY(450);
         Button RegisterReButton = new Button("返回");
         RegisterReButton.setTranslateX(420);
         RegisterReButton.setTranslateY(550);
@@ -81,6 +83,7 @@ public class Client extends Application {
         TextField RegisterAccountTextField = new TextField();
         TextField RegisterPasswordTextField = new TextField();
         TextField RegisterIDTextField = new TextField();
+        TextField RegisterSignatureTextField = new TextField();
 
         RegisterPane.setHgap(20);
         RegisterPane.setVgap(20);
@@ -94,19 +97,21 @@ public class Client extends Application {
         RegisterPane.add(RegisterAccountLabel, 2, 5);
         RegisterPane.add(RegisterPasswordLabel, 2, 7);
         RegisterPane.add(RegisterIDLabel, 2, 9);
+        RegisterPane.add(RegisterSignatureLabel, 2, 11);
         RegisterPane.add(RegisterAccountTextField, 3, 5);
         RegisterPane.add(RegisterPasswordTextField, 3, 7);
         RegisterPane.add(RegisterIDTextField, 3, 9);
+        RegisterPane.add(RegisterSignatureTextField, 3, 11);
+
         RegisterPane.getChildren().addAll(RegisterOkButton, RegisterReButton);
         RegisterReButton.setOnAction(e -> ShowStage.setScene(SignScene));
         RegisterOkButton.setOnAction(e -> {
             try {
                 String xx = RegisterIDTextField.getText() + "%" + RegisterAccountTextField.getText()
-                        + "%" + RegisterPasswordTextField.getText();
+                        + "%" + RegisterPasswordTextField.getText() + "%" + RegisterSignatureTextField.getText();
                 Message message = new Message(new Date(), "0", "0", xx, "signUp");
                 String mm = message.serialize();
                 writer.println(mm);
-
                 while (!receiveMsgOrNot) {
                     Thread.onSpinWait();
                 }
@@ -211,6 +216,7 @@ public class Client extends Application {
     public static void setReceiveMsgOrNot(boolean rm) {
         receiveMsgOrNot = rm;
     }
+
 
 }
 
