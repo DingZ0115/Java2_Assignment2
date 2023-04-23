@@ -6,8 +6,11 @@ import java.io.*;
 import java.net.Socket;
 import java.net.SocketException;
 import java.sql.*;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 
@@ -16,10 +19,10 @@ public class ServerThread extends Thread {
     ConcurrentMap<String, Socket> clients;
     HashMap<String, String> clientsInfo = new HashMap<>(); //账号，账号，昵称，个性签名
     BufferedReader bufferedReader;
-
     InputStream in;
     OutputStream out;
     PrintWriter writer;
+    SimpleDateFormat format = new SimpleDateFormat("EEE MMM dd HH:mm:ss zzz yyyy", Locale.US);
 
     public ServerThread(Socket socket, ConcurrentMap<String, Socket> clients, HashMap<String, String> clientsInfo) throws IOException {
         this.socket = socket;
@@ -152,7 +155,10 @@ public class ServerThread extends Thread {
             Message response = new Message(new Date(), "0", "0", xx, "responseSignIn");
             String mm = response.serialize();
             writer.println(mm);
-        } catch (SQLException | IOException e) {
+            Thread.sleep(200);
+            //一个用户上线成功后要更新自己初始的聊天记录
+            getHistory(accountAndPasswd[0], accountAndPasswd[0], conn);
+        } catch (SQLException | IOException | InterruptedException e) {
             throw new RuntimeException(e);
         }
     }
@@ -202,7 +208,6 @@ public class ServerThread extends Thread {
             pstmt.setString(2, m.getTimestamp().toString());
             pstmt.setString(3, m.getSendBy());
             pstmt.setString(4, m.getSendTo());
-
             int rowsAffected = pstmt.executeUpdate();
             if (rowsAffected > 0) {
                 Socket toSocket = clients.get(m.getSendTo());
@@ -212,6 +217,7 @@ public class ServerThread extends Thread {
                 PrintWriter w = new PrintWriter(out, true);
                 w.println(mm);
             }
+            pstmt.close();
         } catch (IOException ex) {
             ex.printStackTrace();
         } catch (SQLException e) {
@@ -263,6 +269,7 @@ public class ServerThread extends Thread {
                     }
                 }
             }
+            pstmt.close();
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
@@ -297,6 +304,7 @@ public class ServerThread extends Thread {
                     }
                 }
             }
+            rs.close();
             pstmt.close();
         } catch (SQLException e) {
             throw new RuntimeException(e);
@@ -321,6 +329,30 @@ public class ServerThread extends Thread {
             }
         } catch (IOException ex) {
             throw new RuntimeException(ex);
+        }
+    }
+
+
+    public void getHistory(String sendBy, String sendTo, Connection conn) {
+        try {
+            PreparedStatement pstmt = conn.prepareStatement("SELECT * FROM private_chat_list WHERE sendby_account = ? AND sendto_account = ?");
+            pstmt.setString(1, sendBy);
+            pstmt.setString(2, sendTo);
+            ResultSet rs = pstmt.executeQuery();
+            while (rs.next()) {
+                String content = rs.getString("content");
+                String time = rs.getString("time");
+                Message msg = new Message(format.parse(time), sendBy, sendTo, content, "getPrivateInitialHistory");
+                Socket toSocket = clients.get(sendTo);
+                String mm = msg.serialize();
+                OutputStream out = toSocket.getOutputStream();
+                PrintWriter w = new PrintWriter(out, true);
+                w.println(mm);
+            }
+            rs.close();
+            pstmt.close();
+        } catch (SQLException | ParseException | IOException e) {
+            throw new RuntimeException(e);
         }
     }
 }

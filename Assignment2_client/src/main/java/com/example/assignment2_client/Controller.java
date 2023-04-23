@@ -46,8 +46,6 @@ public class Controller implements Initializable {
     Label showMyAccount;
     @FXML
     TextField textSearch;
-    //    @FXML
-//    ImageView emoj;
     @FXML
     Button btnSend;
     @FXML
@@ -69,24 +67,24 @@ public class Controller implements Initializable {
     PrintWriter writer;
     Stage curStage;
     String personal_signature;
-    boolean updateFlag = false;
     String curChat; //当前通信的账户
     HashMap<String, String[]> onlineUserMap = new HashMap<>();
 
     HashMap<String, String[]> groupMap = new HashMap<>();
     String speakingPerson; //群聊里面发言的人，在用户发言和用户收到信息都要更新
+    boolean changeFlag;
 
     @Override
     public void initialize(URL url, ResourceBundle resourceBundle) {
         inputArea.setFont(new Font(14));
-//        msgSCP.setVvalue(1.0);
+        msgSCP.setVvalue(1.0);
         msgSCP.vvalueProperty().addListener(new ChangeListener<Number>() {
             @Override
             public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) {
-//                if (updateFlag) {
-                msgSCP.setVvalue(msgVBox.getHeight());
-//                    updateFlag = false;
-//                }
+                if (changeFlag) {
+                    msgSCP.setVvalue(msgVBox.getHeight());
+                    changeFlag = false;
+                }
             }
         });
         portrait.setOnMouseMoved(new EventHandler<MouseEvent>() {
@@ -163,6 +161,7 @@ public class Controller implements Initializable {
     }
 
     public void setInfo(String info) {
+        //登录后的初始设置
         String[] onlineUsers = info.split("%");
         String[] host = onlineUsers[0].split("\\|");
         personal_signature = host[2];
@@ -265,7 +264,7 @@ public class Controller implements Initializable {
         Label l1 = new Label();
         Label l2 = new Label();
         //如果发送方不是上一个发送方，要把对话框清空
-        if (msg.getMethod().equals("chat")) {
+        if (msg.getMethod().equals("chat")) {  //私聊收到消息
             if (!msg.sendBy.equals(curChat)) {
                 msgVBox.getChildren().clear();
                 showFriendName.setText(onlineUserMap.get(msg.sendBy)[1]);
@@ -276,7 +275,10 @@ public class Controller implements Initializable {
                 l1.setText(onlineUserMap.get(msg.sendBy)[1] + " " + msg.getTimestamp());
             }
             curChat = msg.sendBy;
-        } else {
+        } else if (msg.getMethod().equals("getPrivateInitialHistory")) { //用户登录初始
+            l1.setText(showMyName.getText() + " " + msg.getTimestamp());
+            l2.setText(msg.data);
+        } else { //群聊收到消息
             String[] number_user = msg.getSendBy().split("%");
             if (!number_user[0].equals(curChat)) {
                 // TODO: 不能瞎clear，因为群聊发多少条，curChat都不变

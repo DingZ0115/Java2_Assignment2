@@ -195,7 +195,6 @@ public class Client extends Application {
                     alert.setContentText("您的账号或密码错误，无法进行登录");
                     alert.showAndWait();
                 }
-
             } catch (IOException ex) {
                 throw new RuntimeException(ex);
             }

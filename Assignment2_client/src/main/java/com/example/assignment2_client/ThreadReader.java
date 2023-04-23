@@ -41,7 +41,7 @@ public class ThreadReader extends Thread {
                         Client.setReplyMsg(decodedMessage);
                         Client.setReceiveMsgOrNot(true);
                     }
-                    case "chat", "broadcastGroupChat" -> {
+                    case "chat", "broadcastGroupChat", "getPrivateInitialHistory" -> {
                         Platform.runLater(() -> {
                             curController.showRecvMsg(decodedMessage);
                         });
@@ -64,9 +64,7 @@ public class ThreadReader extends Thread {
                             curController.responseCreateGroup(decodedMessage);
                         });
                     }
-                    case "TransferFile" -> {
-                        curController.saveFile(decodedMessage);
-                    }
+                    case "TransferFile" -> curController.saveFile(decodedMessage);
                 }
             }
         } catch (SocketException e) {
