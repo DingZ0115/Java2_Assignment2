@@ -64,6 +64,9 @@ public class ThreadReader extends Thread {
                             curController.responseCreateGroup(decodedMessage);
                         });
                     }
+                    case "TransferFile" -> {
+                        curController.saveFile(decodedMessage);
+                    }
                 }
             }
         } catch (SocketException e) {
@@ -88,4 +91,5 @@ public class ThreadReader extends Thread {
         ObjectMapper objectMapper = new ObjectMapper();
         return objectMapper.readValue(s, Message.class);
     }
+
 }

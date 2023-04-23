@@ -1,5 +1,7 @@
 package com.example.assignment2_client;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.ObservableList;
@@ -18,9 +20,12 @@ import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.VBox;
+import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import javafx.scene.text.Font;
+import javafx.scene.text.Text;
 import javafx.scene.text.TextAlignment;
+import javafx.stage.FileChooser;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 
@@ -32,6 +37,8 @@ import java.util.stream.Collectors;
 
 public class Controller implements Initializable {
     @FXML
+    ImageView upload;
+    @FXML
     ImageView portrait;
     @FXML
     Label showMyName;
@@ -39,8 +46,8 @@ public class Controller implements Initializable {
     Label showMyAccount;
     @FXML
     TextField textSearch;
-    @FXML
-    ImageView emoj;
+    //    @FXML
+//    ImageView emoj;
     @FXML
     Button btnSend;
     @FXML
@@ -72,14 +79,14 @@ public class Controller implements Initializable {
     @Override
     public void initialize(URL url, ResourceBundle resourceBundle) {
         inputArea.setFont(new Font(14));
-        msgSCP.setVvalue(1.0);
+//        msgSCP.setVvalue(1.0);
         msgSCP.vvalueProperty().addListener(new ChangeListener<Number>() {
             @Override
             public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) {
-                if (updateFlag) {
-                    msgSCP.setVvalue(1.0);
-                    updateFlag = false;
-                }
+//                if (updateFlag) {
+                msgSCP.setVvalue(msgVBox.getHeight());
+//                    updateFlag = false;
+//                }
             }
         });
         portrait.setOnMouseMoved(new EventHandler<MouseEvent>() {
@@ -106,10 +113,10 @@ public class Controller implements Initializable {
                 btnSend.setCursor(Cursor.HAND);
             }
         });
-        emoj.setOnMouseMoved(new EventHandler<MouseEvent>() {
+        upload.setOnMouseMoved(new EventHandler<MouseEvent>() {
             @Override
             public void handle(MouseEvent event) {
-                emoj.setCursor(Cursor.HAND);
+                upload.setCursor(Cursor.HAND);
             }
         });
     }
@@ -129,20 +136,19 @@ public class Controller implements Initializable {
                         .collect(Collectors.joining("%"));
 
                 //群号+自己的昵称
-                message = new Message(new Date(), curChat + "%" + showMyName.getText()+"%"+showMyAccount,
+                message = new Message(new Date(), curChat + "%" + showMyName.getText() + "%" + showMyAccount,
                         result, ss, "groupChat");
                 speakingPerson = showMyAccount.getText();
             }
             String mm = message.serialize();
             writer.println(mm);
-            showSendMsg(message);
+            showSendMsg(message.getData(), false, message.getTimestamp());
             inputArea.clear();
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    @FXML
     public void doSendMessage(ActionEvent event) {
         //空消息不允许发送
         if (inputArea.getText().equals("")) {
@@ -213,20 +219,26 @@ public class Controller implements Initializable {
         alert.showAndWait();
     }
 
-    public void showSendMsg(Message msg) {
+    public void showSendMsg(String data, boolean fileOrNot, Date time) {
         AnchorPane an = new AnchorPane();
         an.setPrefWidth(590);
         ImageView iv = new ImageView(new Image(Objects.requireNonNull(
                 getClass().getResource("/Image/photo1.jpg")).toExternalForm()));
         iv.setFitWidth(40);
         iv.setFitHeight(40);
+        Label l1 = new Label();
+        Label l2 = new Label();
 
-        Label l1 = new Label(msg.getTimestamp() + " " + showMyName.getText());
+        if (fileOrNot) {
+            l1.setText(time + " " + showMyName.getText());
+            l2.setText("\uD83D\uDCC4 " + data);
+        } else {
+            l1.setText(time + " " + showMyName.getText());
+            l2.setText(data);
+        }
         l1.setFont(new Font(13));
         l1.setTextAlignment(TextAlignment.RIGHT);
         l1.setMaxWidth(400);
-
-        Label l2 = new Label(msg.data);
         l2.setFont(new Font(18));
         l2.setStyle("-fx-background-color: #ffffff;-fx-background-radius: 8;");
         l2.setPadding(new Insets(5, 10, 5, 10));
@@ -251,6 +263,7 @@ public class Controller implements Initializable {
         iv.setFitWidth(40);
         iv.setFitHeight(40);
         Label l1 = new Label();
+        Label l2 = new Label();
         //如果发送方不是上一个发送方，要把对话框清空
         if (msg.getMethod().equals("chat")) {
             if (!msg.sendBy.equals(curChat)) {
@@ -267,7 +280,7 @@ public class Controller implements Initializable {
             String[] number_user = msg.getSendBy().split("%");
             if (!number_user[0].equals(curChat)) {
                 // TODO: 不能瞎clear，因为群聊发多少条，curChat都不变
-                if(!number_user[2].equals(speakingPerson)){
+                if (!number_user[2].equals(speakingPerson)) {
                     msgVBox.getChildren().clear();
                     showFriendName.setText(number_user[0]);
                 }
@@ -275,10 +288,9 @@ public class Controller implements Initializable {
             l1.setText(number_user[1] + " " + msg.getTimestamp());
             curChat = number_user[0];
         }
+        l2.setText(msg.data);
         l1.setFont(new Font(13));
         l1.setMaxWidth(400);
-
-        Label l2 = new Label(msg.data);
         l2.setFont(new Font(18));
         l2.setStyle("-fx-background-color: #55a3ec;-fx-background-radius: 8;");
         l2.setPadding(new Insets(5, 10, 5, 10));
@@ -406,13 +418,7 @@ public class Controller implements Initializable {
         alert.close();
     }
 
-    @FXML
-    public void emojClickAction(MouseEvent event) {
-
-    }
-
     //头像点击事件
-    @FXML
     public void mouseClickMyImage(MouseEvent event) {
         DialogPane dp = new DialogPane();
 
@@ -547,5 +553,114 @@ public class Controller implements Initializable {
         alert.setHeaderText("群组提醒");
         alert.setContentText("您已加入由" + hostUser + "创建的群聊" + groupNumber);
         alert.showAndWait();
+    }
+
+    public void uploadClickAction(MouseEvent mouseEvent) {
+        FileChooser fc = new FileChooser();
+        fc.setTitle("选择文件");
+        File file = fc.showOpenDialog(curStage);
+        if (file != null) {
+            File dir = new File(file.getParent());
+            if (dir.isDirectory()) {
+                fc.setInitialDirectory(dir);
+            }
+            if (!groupMap.containsKey(curChat)) {
+                showSendMsg(file.getName(), true, new Date());
+                sendFile(file);
+            } else {
+                Alert alert = new Alert(Alert.AlertType.WARNING);
+                alert.setTitle("警告");
+                alert.setHeaderText("群聊警告");
+                alert.setContentText("不支持在群聊中传输文件");
+                alert.showAndWait();
+            }
+        }
+
+    }
+
+    public void sendFile(File file) {
+        try {
+            Message message = new Message(new Date(), showMyAccount.getText(),
+                    curChat, serialize(file), "PrivateSendFile");
+            String mm = message.serialize();
+            writer.println(mm);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void showRecvFile(String fileName, String sendBy, Date time) {
+        AnchorPane an = new AnchorPane();
+        an.setPrefWidth(590);
+        ImageView iv = new ImageView(new Image(Objects.requireNonNull(
+                getClass().getResource("/Image/photo2.jpg")).toExternalForm()));
+        iv.setFitWidth(40);
+        iv.setFitHeight(40);
+        Label l1 = new Label();
+        Label l2 = new Label();
+        if (!sendBy.equals(curChat)) {
+            msgVBox.getChildren().clear();
+            showFriendName.setText(onlineUserMap.get(sendBy)[1]);
+        }
+        if (sendBy.equals(showMyAccount.getText())) {
+            l1.setText(showMyName.getText() + " " + time);
+        } else {
+            l1.setText(onlineUserMap.get(sendBy)[1] + " " + time);
+        }
+        curChat = sendBy;
+        l2.setText("\uD83D\uDCC4 " + fileName);
+
+        l1.setFont(new Font(13));
+        l1.setMaxWidth(400);
+        l2.setFont(new Font(18));
+        l2.setStyle("-fx-background-color: #55a3ec;-fx-background-radius: 8;");
+        l2.setPadding(new Insets(5, 10, 5, 10));
+        l2.setMaxWidth(400);
+        l2.setWrapText(true);
+
+        an.getChildren().addAll(iv, l1, l2);
+        AnchorPane.setLeftAnchor(iv, 22.0);
+        AnchorPane.setTopAnchor(iv, 23.0);
+        AnchorPane.setLeftAnchor(l1, 76.0);
+        AnchorPane.setTopAnchor(l1, 23.0);
+        AnchorPane.setLeftAnchor(l2, 76.0);
+        AnchorPane.setTopAnchor(l2, 51.0);
+        msgVBox.getChildren().add(an);
+    }
+
+    public void saveFile(Message msg) throws IOException, ClassNotFoundException {
+        File fileOrigin = (File) deserializeFile(msg.getData());
+        File fileSave = new File("F:/java2File/" + fileOrigin.getName());
+        //显示传过来的文件
+        Platform.runLater(() -> {
+            showRecvFile(fileOrigin.getName(), msg.getSendBy(), msg.getTimestamp());
+        });
+        fileSave.delete();
+        fileSave.createNewFile();
+        byte[] bs = new byte[1024];
+        FileInputStream originStream = new FileInputStream(fileOrigin);
+        FileOutputStream saveStream = new FileOutputStream(fileSave);
+        int len;
+        while ((len = originStream.read(bs)) != -1) {
+            saveStream.write(bs, 0, len);
+        }
+        originStream.close();
+        saveStream.close();
+    }
+
+    public String serialize(File file) throws IOException {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        ObjectOutputStream oos = new ObjectOutputStream(baos);
+        oos.writeObject(file);
+        oos.close();
+        return Base64.getEncoder().encodeToString(baos.toByteArray());
+    }
+
+    public static Object deserializeFile(String s) throws IOException, ClassNotFoundException {
+        byte[] data = Base64.getDecoder().decode(s);
+        ObjectInputStream ois = new ObjectInputStream(new ByteArrayInputStream(data));
+        Object o = ois.readObject();
+        ois.close();
+        return o;
     }
 }

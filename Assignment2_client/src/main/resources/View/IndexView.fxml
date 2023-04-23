@@ -87,11 +87,11 @@
                             <top>
                                 <AnchorPane prefHeight="30.0" BorderPane.alignment="CENTER">
                                     <children>
-                                        <ImageView fx:id="emoj" fitHeight="20.0" fitWidth="20.0" layoutX="14.0"
-                                                   layoutY="6.0" onMouseClicked="#emojClickAction" pickOnBounds="true"
+                                        <ImageView fx:id="upload" fitHeight="20.0" fitWidth="20.0" layoutX="14.0"
+                                                   layoutY="6.0" onMouseClicked="#uploadClickAction" pickOnBounds="true"
                                                    preserveRatio="true">
                                             <image>
-                                                <Image url="@../Image/emoj.png"/>
+                                                <Image url="@../Image/upload.png"/>
                                             </image>
                                         </ImageView>
                                     </children>

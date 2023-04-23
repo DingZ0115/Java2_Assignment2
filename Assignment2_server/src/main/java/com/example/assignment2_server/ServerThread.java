@@ -83,6 +83,7 @@ public class ServerThread extends Thread {
                             String nameAndSignature = accountAndPasswd[0] + "|"
                                     + rs.getString("user_name") + "|"
                                     + rs.getString("personal_signature");
+                            System.out.println("用户" + accountAndPasswd[0] + "来了");
                             StringBuilder sb = new StringBuilder();
                             sb.append("responseSignIn-Yes");
                             sb.append("%");
@@ -164,6 +165,7 @@ public class ServerThread extends Thread {
                     //在数据库里面创建群聊，给出对应的群聊号，把群聊号返回前端。前端存群聊号，群聊人[]
                         dealCreateGroup(message);
                 case "groupChat" -> dealGroupChat(message);
+                case "PrivateSendFile" -> dealPrivateSendFile(message);
                 default -> dealChat(message);
             }
         } catch (ClassNotFoundException e) {
@@ -199,9 +201,22 @@ public class ServerThread extends Thread {
         }
     }
 
+    public void dealPrivateSendFile(Message m) {
+        try {
+            String sendTo = m.getSendTo();
+            Socket toSocket = clients.get(sendTo);
+            Message transMessage = new Message(new Date(), m.getSendBy(), sendTo, m.getData(), "TransferFile");
+            String mm = transMessage.serialize();
+            OutputStream out = toSocket.getOutputStream();
+            PrintWriter w = new PrintWriter(out, true);
+            w.println(mm);
+        } catch (IOException ex) {
+            ex.printStackTrace();
+        }
+    }
+
     public void dealGroupChat(Message m) {
         //给所有groupUsers中的所有人发消息，被加入了群聊
-        System.out.println(m.getSendTo());
         String[] groupUsers = m.getSendTo().split("%");
         for (String groupUser : groupUsers) {
             try {
@@ -243,6 +258,7 @@ public class ServerThread extends Thread {
     public void dealExit(Message message) {
         try {
             String createUserInfo = clientsInfo.get(message.getData());
+            System.out.println("用户" + message.getData() + "离开了");
             clients.remove(message.getData());
             clientsInfo.remove(message.getData());
             Set<String> keySet = clients.keySet();  // 获取所有的key
