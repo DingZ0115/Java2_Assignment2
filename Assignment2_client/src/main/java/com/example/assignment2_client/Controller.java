@@ -44,8 +44,6 @@ public class Controller implements Initializable {
     @FXML
     Label showMyAccount;
     @FXML
-    TextField textSearch;
-    @FXML
     Button btnSend;
     @FXML
     Label showFriendName;
@@ -517,7 +515,7 @@ public class Controller implements Initializable {
     }
 
     public void setAUserPage(String[] value, boolean groupOrNot) {
-        String[] imgs = {"photo1.jpg", "photo2.jpg", "photo3.jpg", "photo4.jpg"};
+        String[] imgs = {"photo3.jpg", "photo4.jpg", "photo5.jpg", "photo6.jpg"};
         int count = (int) (Math.random() * 100);
         AnchorPane an = new AnchorPane();
         ImageView iv = new ImageView(new Image(Objects.requireNonNull(getClass().

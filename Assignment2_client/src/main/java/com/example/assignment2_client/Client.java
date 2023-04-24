@@ -140,10 +140,13 @@ public class Client extends Application {
     public void Sign() {// ***登录UI
         Label SignTitle = new Label("    登录");
         SignTitle.setFont(Font.font("T", FontWeight.LIGHT, FontPosture.ITALIC, 40));
+        SignTitle.setStyle("-fx-text-fill: white;");
         Label SignAccountLabel = new Label("账号:");
         SignAccountLabel.setFont(Font.font("T", FontWeight.LIGHT, FontPosture.ITALIC, 20));
+        SignAccountLabel.setStyle("-fx-text-fill: white;");
         Label SignPasswordLabel = new Label("密码:");
         SignPasswordLabel.setFont(Font.font("T", FontWeight.LIGHT, FontPosture.ITALIC, 20));
+        SignPasswordLabel.setStyle("-fx-text-fill: white;");
         TextField SignAccountTextField = new TextField();
         TextField SignPasswordTextField = new TextField();
         Button SignOkButton = new Button("登录");

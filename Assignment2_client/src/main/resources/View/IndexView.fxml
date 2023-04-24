@@ -57,20 +57,15 @@
             </top>
             <center>
                 <BorderPane BorderPane.alignment="CENTER">
-                    <top>
-                        <AnchorPane focusTraversable="true" prefHeight="50.0" BorderPane.alignment="CENTER">
-                            <children>
-                                <TextField fx:id="textSearch" layoutX="33.0" layoutY="12.0" prefHeight="23.0"
-                                           prefWidth="223.0" promptText="搜索好友"
-                                           style="-fx-background-color: #d3d1d1;"/>
-                            </children>
-                        </AnchorPane>
-                    </top>
+                    <padding>
+                        <Insets top="10"/>
+                    </padding>
                     <center>
                         <ScrollPane fx:id="friendSCP" prefHeight="600.0" prefWidth="300.0" styleClass="edge-to-edge"
                                     BorderPane.alignment="CENTER">
                             <content>
-                                <VBox fx:id="friendVBox" prefWidth="280.0"/>
+                                <VBox fx:id="friendVBox" prefWidth="280.0" prefHeight="480"
+                                      style="-fx-background-color: #e7e7e7;"/>
                             </content>
                         </ScrollPane>
                     </center>
@@ -97,6 +92,13 @@
                                     </children>
                                 </AnchorPane>
                             </top>
+                            <center>
+                                <TextArea fx:id="inputArea" wrapText="true" BorderPane.alignment="CENTER">
+                                    <BorderPane.margin>
+                                        <Insets right="15.0"/>
+                                    </BorderPane.margin>
+                                </TextArea>
+                            </center>
                             <bottom>
                                 <AnchorPane prefHeight="40.0" BorderPane.alignment="CENTER">
                                     <children>
@@ -104,15 +106,11 @@
                                                 onAction="#doSendMessage" prefHeight="27.0" prefWidth="70.0"
                                                 style="-fx-background-color: #55a3ec;" text="发   送"/>
                                     </children>
+                                    <BorderPane.margin>
+                                        <Insets right="15.0"/>
+                                    </BorderPane.margin>
                                 </AnchorPane>
                             </bottom>
-                            <center>
-                                <TextArea fx:id="inputArea" wrapText="true" BorderPane.alignment="CENTER">
-                                    <BorderPane.margin>
-                                        <Insets left="5.0" right="5.0"/>
-                                    </BorderPane.margin>
-                                </TextArea>
-                            </center>
                         </BorderPane>
                     </bottom>
                     <center>
@@ -128,7 +126,11 @@
             <top>
                 <AnchorPane prefHeight="50.0" BorderPane.alignment="CENTER">
                     <children>
-                        <Label fx:id="showFriendName" layoutX="25.0" layoutY="20.0" text="大海">
+                        <Label fx:id="showFriendName" layoutX="25.0" layoutY="20.0" text="大海"
+                               style="-fx-background-color:#ffef8d; -fx-background-radius: 8;">
+                            <padding>
+                                <Insets top="5" right="10" bottom="5" left="10"/>
+                            </padding>
                             <font>
                                 <Font size="24.0"/>
                             </font>
