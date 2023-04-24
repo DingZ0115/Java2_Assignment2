@@ -18,7 +18,7 @@ public class Main {
         ServerSocket serverSocket = new ServerSocket(port);
         while (true) {
             try {
-                Socket socket = serverSocket.accept();//监听是否来了一个新用户
+                Socket socket = serverSocket.accept(); //监听是否来了一个新用户
                 //传一个当前用户和socket的map
                 ServerThread thread = new ServerThread(socket, clients, clientsInfo); //给新用户创建一个线程
                 thread.start();

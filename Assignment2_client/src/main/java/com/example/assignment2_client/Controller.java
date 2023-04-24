@@ -1,5 +1,13 @@
 package com.example.assignment2_client;
 
+import java.awt.MouseInfo;
+import java.io.*;
+import java.text.SimpleDateFormat;
+import java.util.*;
+import java.util.stream.Collectors;
+import java.text.ParseException;
+import java.net.URL;
+
 import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
@@ -26,13 +34,6 @@ import javafx.stage.FileChooser;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 
-import java.awt.MouseInfo;
-import java.io.*;
-import java.net.URL;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
-import java.util.*;
-import java.util.stream.Collectors;
 
 public class Controller implements Initializable {
     @FXML
@@ -65,7 +66,7 @@ public class Controller implements Initializable {
     Stage curStage;
     String personal_signature;
     String curChat; //当前通信的账户
-    HashMap<String, String[]> onlineUserMap = new HashMap<>();//账户; 账户，昵称，个性签名，最近聊天时间
+    HashMap<String, String[]> onlineUserMap = new HashMap<>(); //账户; 账户，昵称，个性签名，最近聊天时间
     HashMap<String, String[]> groupMap = new HashMap<>();
     String speakingPerson; //群聊里面发言的人，在用户发言和用户收到信息都要更新
 
@@ -74,12 +75,6 @@ public class Controller implements Initializable {
     public void initialize(URL url, ResourceBundle resourceBundle) {
         inputArea.setFont(new Font(14));
         msgSCP.setVvalue(1.0);
-//        msgSCP.vvalueProperty().addListener(new ChangeListener<Number>() {
-//            @Override
-//            public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) {
-//                msgSCP.setVvalue(1.0);
-//            }
-//        });
         msgSCP.vvalueProperty().addListener(new ChangeListener<Number>() {
             @Override
             public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) {
@@ -130,7 +125,7 @@ public class Controller implements Initializable {
                 message = new Message(new Date(), showMyAccount.getText(), curChat, ss, "chat");
             } else {
                 //群聊中curChat存的是群聊号，要给除自己外所有人发消息
-                String[] groupUsers = groupMap.get(curChat);//groupUsers[0]为群聊号，groupUsers[1]为发起人
+                String[] groupUsers = groupMap.get(curChat); //groupUsers[0]为群聊号，groupUsers[1]为发起人
                 //所有需要发送的人
                 String result = Arrays.stream(groupUsers)
                         .filter(user -> !user.equals(showMyAccount.getText()))
@@ -195,7 +190,7 @@ public class Controller implements Initializable {
 
     public void exitOnlineUserMap(Message exitMsg) {
         String[] info = exitMsg.getData().split("\\|");
-        onlineUserMap.remove(info[0]);//从在线列表删除下线用户
+        onlineUserMap.remove(info[0]); //从在线列表删除下线用户
         if (!groupMap.containsKey(curChat)) { //好友退出时，用户处于私聊状态，返回到自己跟自己的聊天
             showFriendName.setText(showMyName.getText());
             msgVBox.getChildren().clear();
@@ -330,7 +325,7 @@ public class Controller implements Initializable {
         stage.initOwner(curStage);
         stage.initModality(Modality.WINDOW_MODAL);
 
-        ScrollPane scrollPane = new ScrollPane();// 使用一个滚动板面
+        ScrollPane scrollPane = new ScrollPane(); // 使用一个滚动板面
         VBox box = new VBox(); // 滚动板面里放行垂直布局， VBox里放多个复选框
 
         Set<String> keySet = onlineUserMap.keySet();  // 获取所有的key
@@ -349,7 +344,7 @@ public class Controller implements Initializable {
                 }
             });
             box.getChildren().add(cb);
-            box.setMargin(cb, new Insets(10, 10, 0, 10));// 设置间距
+            box.setMargin(cb, new Insets(10, 10, 0, 10)); // 设置间距
         }
         Button button = new Button("确认创建群聊");
         button.setStyle("-fx-background-color:#ffffff");
@@ -518,8 +513,8 @@ public class Controller implements Initializable {
         String[] imgs = {"photo3.jpg", "photo4.jpg", "photo5.jpg", "photo6.jpg"};
         int count = (int) (Math.random() * 100);
         AnchorPane an = new AnchorPane();
-        ImageView iv = new ImageView(new Image(Objects.requireNonNull(getClass().
-                getResource("/Image/" + imgs[count % 4])).toExternalForm()));
+        ImageView iv = new ImageView(new Image(Objects.requireNonNull(getClass()
+                .getResource("/Image/" + imgs[count % 4])).toExternalForm()));
         iv.setFitWidth(40);
         iv.setFitHeight(40);
         //给这个组件设置唯一标识
@@ -569,7 +564,7 @@ public class Controller implements Initializable {
                 if (!value[0].equals(curChat)) {
                     curChat = value[0];
                     System.out.println("curChat " + curChat);
-                    msgVBox.getChildren().clear();//清空聊天框的内容
+                    msgVBox.getChildren().clear(); //清空聊天框的内容
                     //获得新窗口的记录
                     getHistory();
                 }
@@ -580,9 +575,9 @@ public class Controller implements Initializable {
     public void getHistory() {
         try {
             String method = "";
-            if (groupMap.containsKey(curChat)) {//切换到了群聊
+            if (groupMap.containsKey(curChat)) { //切换到了群聊
                 method = "getGroupHistory";
-            } else {//切换到了私聊
+            } else { //切换到了私聊
                 if (curChat.equals(showMyAccount.getText())) {
                     method = "getPrivateInitialHistory";
                 } else {
@@ -736,7 +731,7 @@ public class Controller implements Initializable {
         l2.setPadding(new Insets(5, 10, 5, 10));
         l2.setMaxWidth(400);
         l2.setWrapText(true);
-        if (!msg.getSendBy().equals(showMyAccount.getText())) {//对方发的
+        if (!msg.getSendBy().equals(showMyAccount.getText())) { //对方发的
             iv = new ImageView(new Image(Objects.requireNonNull(
                     getClass().getResource("/Image/photo2.jpg")).toExternalForm()));
             l1.setText(msg.getSendTo() + " " + msg.getTimestamp());
@@ -747,7 +742,7 @@ public class Controller implements Initializable {
             AnchorPane.setTopAnchor(l1, 23.0);
             AnchorPane.setLeftAnchor(l2, 76.0);
             AnchorPane.setTopAnchor(l2, 51.0);
-        } else {//自己发的
+        } else { //自己发的
             iv = new ImageView(new Image(Objects.requireNonNull(
                     getClass().getResource("/Image/photo1.jpg")).toExternalForm()));
             l1.setText(msg.getTimestamp() + " " + showMyAccount.getText());

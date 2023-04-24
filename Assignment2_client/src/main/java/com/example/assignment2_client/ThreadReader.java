@@ -1,14 +1,15 @@
 package com.example.assignment2_client;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import javafx.application.Platform;
-import javafx.scene.control.Alert;
-import javafx.scene.control.ButtonType;
 
 import java.io.*;
 import java.net.Socket;
 import java.net.SocketException;
 import java.util.Optional;
+
+import javafx.application.Platform;
+import javafx.scene.control.Alert;
+import javafx.scene.control.ButtonType;
 
 public class ThreadReader extends Thread {
     Socket socket;
@@ -65,6 +66,9 @@ public class ThreadReader extends Thread {
                         Platform.runLater(() -> {
                             curController.showHistory(decodedMessage);
                         });
+                    }
+                    default -> {
+
                     }
                 }
             }

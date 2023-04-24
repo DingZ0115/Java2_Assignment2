@@ -25,9 +25,9 @@ public class Client extends Application {
     BufferedReader br;
     PrintWriter writer;
     Stage ShowStage = new Stage();
-    static GridPane SignPane = new GridPane();// 登录界面的
+    static GridPane SignPane = new GridPane(); // 登录界面的
     static Scene SignScene = new Scene(SignPane, 600, 400);
-    GridPane RegisterPane = new GridPane();// 注册界面的
+    GridPane RegisterPane = new GridPane(); // 注册界面的
     Scene RegisterScene = new Scene(RegisterPane, 500, 600);
     Scene centerScene;
     static Message replyMsg;

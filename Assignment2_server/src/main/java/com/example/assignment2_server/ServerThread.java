@@ -23,7 +23,17 @@ public class ServerThread extends Thread {
     PrintWriter writer;
     SimpleDateFormat format = new SimpleDateFormat("EEE MMM dd HH:mm:ss zzz yyyy", Locale.US);
 
-    public ServerThread(Socket socket, ConcurrentMap<String, Socket> clients, HashMap<String, String> clientsInfo) throws IOException {
+    /**
+     * ServerThread类是用于处理与客户端Socket的通信的线程.
+     * 该类的构造函数初始化了与Socket相关的流和客户端信息.
+     *
+     * @param socket      要处理的Socket对象
+     * @param clients     存储客户端Socket对象的并发映射表
+     * @param clientsInfo 存储客户端信息的哈希映射表
+     * @throws IOException 如果发生I/O错误
+     */
+    public ServerThread(Socket socket, ConcurrentMap<String, Socket> clients,
+                        HashMap<String, String> clientsInfo) throws IOException {
         this.socket = socket;
         this.clients = clients;
         this.clientsInfo = clientsInfo;
@@ -109,13 +119,14 @@ public class ServerThread extends Thread {
             if (clients.containsKey(accountAndPasswd[0])) {
                 xx = "Already login";
             } else if (!clients.containsKey(accountAndPasswd[0])) {
-                PreparedStatement pstmt = conn.prepareStatement("SELECT * FROM users WHERE account = ? AND passwd = ?;");
+                PreparedStatement pstmt = conn.prepareStatement(
+                        "SELECT * FROM users WHERE account = ? AND passwd = ?;");
                 pstmt.setString(1, accountAndPasswd[0]);
                 pstmt.setString(2, accountAndPasswd[1]);
                 ResultSet rs = pstmt.executeQuery();
                 boolean flag = rs.next();
                 // 处理查询结果
-                if (flag) {//上线成功
+                if (flag) { //上线成功
                     //向列表中添加一个新用户，更新Main中的列表，返回前端所有当前在线的用户
                     String nameAndSignature = accountAndPasswd[0] + "|"
                             + rs.getString("user_name") + "|"
@@ -201,8 +212,10 @@ public class ServerThread extends Thread {
             // 处理查询结果
             String xx;
             if (flag) {
-                PreparedStatement pstmt = conn.prepareStatement("INSERT INTO users (user_name, account, passwd,personal_signature)\n" +
-                        "VALUES (?, ?, ?, ?);");
+                PreparedStatement pstmt = conn.prepareStatement(
+                        "INSERT INTO users (user_name, account, passwd,personal_signature)\n"
+                                +
+                                "VALUES (?, ?, ?, ?);");
                 pstmt.setString(1, information[0]);
                 pstmt.setString(2, information[1]);
                 pstmt.setString(3, information[2]);
@@ -230,7 +243,10 @@ public class ServerThread extends Thread {
 
     public void dealChat(Message m, Connection conn) {
         try {
-            PreparedStatement pstmt = conn.prepareStatement("INSERT INTO private_chat_list (content, time, sendby_account, sendto_account) VALUES (?,?,?,?);");
+            PreparedStatement pstmt = conn.prepareStatement(
+                    "INSERT INTO private_chat_list (content, time, sendby_account, sendto_account) "
+                            +
+                            "VALUES (?,?,?,?);");
             pstmt.setString(1, m.getData());
             pstmt.setString(2, m.getTimestamp().toString());
             pstmt.setString(3, m.getSendBy());
@@ -256,7 +272,8 @@ public class ServerThread extends Thread {
         try {
             String sendTo = m.getSendTo();
             Socket toSocket = clients.get(sendTo);
-            Message transMessage = new Message(new Date(), m.getSendBy(), sendTo, m.getData(), "TransferFile");
+            Message transMessage = new Message(new Date(), m.getSendBy(), sendTo,
+                    m.getData(), "TransferFile");
             String mm = transMessage.serialize();
             OutputStream out = toSocket.getOutputStream();
             PrintWriter w = new PrintWriter(out, true);
@@ -270,7 +287,9 @@ public class ServerThread extends Thread {
         try {
             String[] sendBy = m.getSendBy().split("%");  //[0]为群号，[1]为发消息人的昵称，[2]为发消息人账号
             //把这条消息放到数据库
-            PreparedStatement pstmt = conn.prepareStatement("INSERT INTO group_chat_list(group_id, content, time, user_account) VALUES(?,?,?,?);");
+            PreparedStatement pstmt = conn.prepareStatement("INSERT INTO group_chat_list(group_id, content,"
+                    +
+                    " time, user_account) VALUES(?,?,?,?);");
             pstmt.setInt(1, Integer.parseInt(sendBy[0]));
             pstmt.setString(2, m.getData());
             pstmt.setString(3, m.getTimestamp().toString());
@@ -362,8 +381,8 @@ public class ServerThread extends Thread {
     public void getHistory(String requestUser, String curChat, Connection conn, String method) {
         try {
             PreparedStatement pstmt = conn.prepareStatement(
-                    "SELECT * FROM private_chat_list WHERE (sendby_account = ? AND sendto_account = ?) " +
-                            "OR (sendby_account = ? AND sendto_account = ?)");
+                    "SELECT * FROM private_chat_list WHERE (sendby_account = ? AND sendto_account = ?) "
+                            + "OR (sendby_account = ? AND sendto_account = ?)");
             pstmt.setString(1, requestUser);
             pstmt.setString(2, curChat);
             pstmt.setString(3, curChat);
@@ -401,10 +420,11 @@ public class ServerThread extends Thread {
                 String spokenUser = rs.getString("user_account");
                 PreparedStatement checkName = conn.prepareStatement("SELECT * FROM users WHERE account = ?");
                 checkName.setString(1, spokenUser);
-                ResultSet checkNameRS = checkName.executeQuery();
-                if (checkNameRS.next()) {
-                    String spokenUserName = checkNameRS.getString("user_name");
-                    Message msg = new Message(format.parse(time), spokenUser, spokenUserName, content, "getGroupHistory");
+                ResultSet checkNameRs = checkName.executeQuery();
+                if (checkNameRs.next()) {
+                    String spokenUserName = checkNameRs.getString("user_name");
+                    Message msg = new Message(format.parse(time), spokenUser, spokenUserName,
+                            content, "getGroupHistory");
                     Socket toSocket = clients.get(requestUser);
                     String mm = msg.serialize();
                     OutputStream out = toSocket.getOutputStream();
